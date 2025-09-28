@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Hệ Thống Quản Lý Bán Hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .dashboard-card {
+            transition: transform 0.3s;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+        .stat-card {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        .pos-redirect-card {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .transaction-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .quick-access-grid {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-store"></i> Quản Lý Bán Hàng
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- Navigation cho Admin -->
+                <ul class="navbar-nav me-auto" th:if="${isAdmin}">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/products">
+                            <i class="fas fa-box"></i> Sản Phẩm
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/customers">
+                            <i class="fas fa-users"></i> Khách Hàng
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/orders">
+                            <i class="fas fa-shopping-cart"></i> Đơn Hàng
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/inventory">
+                            <i class="fas fa-warehouse"></i> Kho Hàng
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/transactions">
+                            <i class="fas fa-history"></i> Lịch Sử Giao Dịch
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Navigation cho User/Nhân viên -->
+                <ul class="navbar-nav me-auto" th:if="${!isAdmin}">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/user/pos">
+                            <i class="fas fa-cash-register"></i> 🛒 Bán Hàng (POS)
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/products">
+                            <i class="fas fa-shopping-bag"></i> Sản Phẩm
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/orders">
+                            <i class="fas fa-list-alt"></i> Đơn Hàng Của Tôi
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/transactions">
+                            <i class="fas fa-history"></i> Lịch Sử Giao Dịch
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- User menu -->
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown" th:if="${username != null}">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i>
+                            <span th:text="${username}">User</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/auth/profile">
+                                <i class="fas fa-user-edit"></i> Thông tin cá nhân
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout">
+                                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                            </a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item" th:if="${username == null}">
+                        <a class="nav-link" href="/login">
+                            <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Admin Dashboard -->
+        <div th:if="${isAdmin}">
+            <!-- Welcome Message for Admin -->
+            <div class="row">
+                <div class="col-12">
+                    <h2 class="mb-4">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard Quản Trị
+                    </h2>
+                    <p class="lead text-muted">
+                        Chào mừng <strong th:text="${username}">Admin</strong> đến với hệ thống quản lý bán hàng!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Statistics Cards for Admin -->
+            <div class="row">
+                <div class="col-md-3 mb-4">
+                    <div class="card dashboard-card stat-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-box fa-3x mb-3"></i>
+                            <h3 th:text="${totalProducts ?: 0}">0</h3>
+                            <p class="card-text">Sản Phẩm</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="card dashboard-card stat-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-users fa-3x mb-3"></i>
+                            <h3 th:text="${totalCustomers ?: 0}">0</h3>
+                            <p class="card-text">Khách Hàng</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="card dashboard-card stat-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                            <h3 th:text="${totalOrders ?: 0}">0</h3>
+                            <p class="card-text">Đơn Hàng</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="card dashboard-card stat-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-dollar-sign fa-3x mb-3"></i>
+                            <h3 th:text="${totalRevenue ?: '0'}">0</h3>
+                            <p class="card-text">Doanh Thu (VNĐ)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Access Cards for Admin -->
+            <div class="row quick-access-grid">
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-plus-circle fa-3x text-success mb-3"></i>
+                            <h5 class="card-title">Quản Lý Sản Phẩm</h5>
+                            <p class="card-text">Thêm, sửa, xóa sản phẩm</p>
+                            <a href="/admin/products" class="btn btn-success">
+                                <i class="fas fa-arrow-right"></i> Quản Lý
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-user-plus fa-3x text-info mb-3"></i>
+                            <h5 class="card-title">Quản Lý Khách Hàng</h5>
+                            <p class="card-text">Xem và quản lý thông tin khách hàng</p>
+                            <a href="/admin/customers" class="btn btn-info">
+                                <i class="fas fa-arrow-right"></i> Quản Lý
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clipboard-list fa-3x text-warning mb-3"></i>
+                            <h5 class="card-title">Xử Lý Đơn Hàng</h5>
+                            <p class="card-text">Xem và xử lý đơn hàng của khách</p>
+                            <a href="/admin/orders" class="btn btn-warning">
+                                <i class="fas fa-arrow-right"></i> Quản Lý
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-history fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title">Lịch Sử Giao Dịch</h5>
+                            <p class="card-text">Xem toàn bộ giao dịch trong hệ thống</p>
+                            <a href="/admin/transactions" class="btn btn-primary">
+                                <i class="fas fa-arrow-right"></i> Xem Lịch Sử
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Transactions for Admin -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <div class="card dashboard-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-history"></i> Giao Dịch Gần Đây
+                            </h5>
+                            <a href="/admin/transactions" class="btn btn-sm btn-primary">Xem Tất Cả</a>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="transaction-table">
+                                <table class="table table-hover mb-0" th:if="${recentTransactions != null and !#lists.isEmpty(recentTransactions)}">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Mã GD</th>
+                                            <th>Khách Hàng</th>
+                                            <th>Nhân Viên</th>
+                                            <th>Tổng Tiền</th>
+                                            <th>Thời Gian</th>
+                                            <th>Trạng Thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="transaction : ${recentTransactions}">
+                                            <td><strong th:text="'#' + ${transaction.id}">GD001</strong></td>
+                                            <td th:text="${transaction.customerName}">Khách hàng</td>
+                                            <td th:text="${transaction.employeeName}">Nhân viên</td>
+                                            <td class="text-success fw-bold" th:text="${#numbers.formatDecimal(transaction.total, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">0 VNĐ</td>
+                                            <td th:text="${#temporals.format(transaction.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</td>
+                                            <td>
+                                                <span class="badge bg-success">Hoàn Thành</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div th:if="${recentTransactions == null or #lists.isEmpty(recentTransactions)}" class="text-center py-4">
+                                    <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Chưa có giao dịch nào</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Dashboard - AUTO REDIRECT TO POS -->
+        <div th:if="${!isAdmin}">
+            <!-- Auto redirect message -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card pos-redirect-card text-center py-5">
+                        <div class="card-body">
+                            <i class="fas fa-cash-register fa-4x mb-4"></i>
+                            <h2>🛒 Chuyển Đến POS Bán Hàng</h2>
+                            <p class="lead">Hệ thống sẽ tự động chuyển bạn đến giao diện POS...</p>
+                            <div class="spinner-border text-light mt-3" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Access for User (backup if JS fails) -->
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-cash-register fa-3x text-success mb-3"></i>
+                            <h5 class="card-title">🛒 POS Bán Hàng</h5>
+                            <p class="card-text">Giao diện bán hàng chính</p>
+                            <a href="/user/pos" class="btn btn-success btn-lg">
+                                <i class="fas fa-arrow-right"></i> Mở POS
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-list-alt fa-3x text-warning mb-3"></i>
+                            <h5 class="card-title">Đơn Hàng</h5>
+                            <p class="card-text">Xem đơn hàng đã tạo</p>
+                            <a href="/user/orders" class="btn btn-warning">
+                                <i class="fas fa-arrow-right"></i> Xem Đơn Hàng
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-history fa-3x text-info mb-3"></i>
+                            <h5 class="card-title">Lịch Sử Giao Dịch</h5>
+                            <p class="card-text">Xem lịch sử bán hàng của tôi</p>
+                            <a href="/user/transactions" class="btn btn-info">
+                                <i class="fas fa-arrow-right"></i> Xem Lịch Sử
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error/Success messages -->
+        <div th:if="${error}" class="alert alert-danger mt-4" role="alert">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span th:text="${error}"></span>
+        </div>
+        
+        <div th:if="${success}" class="alert alert-success mt-4" role="alert">
+            <i class="fas fa-check-circle"></i>
+            <span th:text="${success}"></span>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p class="mb-0">
+                &copy; 2024 Hệ Thống Quản Lý Bán Hàng. 
+                <span th:if="${isAdmin}">Dashboard Quản Trị</span>
+                <span th:if="${!isAdmin}">Giao Diện POS</span>
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Auto redirect User to POS -->
+    <script th:if="${!isAdmin}">
+        // Auto redirect to POS after 3 seconds
+        setTimeout(function() {
+            window.location.href = '/user/pos';
+        }, 3000);
+        
+        // Update countdown
+        let countdown = 3;
+        const interval = setInterval(function() {
+            countdown--;
+            if (countdown <= 0) {
+                clearInterval(interval);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

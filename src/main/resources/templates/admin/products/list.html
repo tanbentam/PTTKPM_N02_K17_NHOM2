@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Hình ảnh sản phẩm -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-image"></i> Hình Ảnh</h6>
+                    </div>
+                    <div class="card-body text-center">
+                        <img th:src="@{${product.imagePath} ?: '/images/no-image.png'}" 
+                             alt="Product Image" 
+                             class="img-fluid rounded"
+                             style="max-height: 300px; width: 100%; object-fit: cover;">
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                Kích thước: <span th:text="${product.imageSize ?: 'N/A'}">N/A</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Thông tin chi tiết -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-info-circle"></i> Thông Tin Chi Tiết</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td class="fw-bold">ID:</td>
+                                        <td th:text="${product.id}">1</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Tên sản phẩm:</td>
+                                        <td>
+                                            <span class="badge bg-primary fs-6" th:text="${product.name}">
+                                                Tên sản phẩm
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Danh mục:</td>
+                                        <td>
+                                            <span class="badge bg-secondary" th:text="${product.category}">
+                                                Category
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Giá bán:</td>
+                                        <td>
+                                            <span class="text-success fw-bold fs-5">
+                                                <span th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')}">0</span>₫
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td class="fw-bold">Số lượng:</td>
+                                        <td>
+                                            <span class="fw-bold fs-5" th:text="${product.quantity}">0</span>
+                                            <span th:if="${product.quantity > 10}" class="badge bg-success ms-2">Còn hàng</span>
+                                            <span th:if="${product.quantity > 0 and product.quantity <= 10}" 
+                                                  class="badge bg-warning ms-2">Sắp hết</span>
+                                            <span th:if="${product.quantity == 0}" class="badge bg-danger ms-2">Hết hàng</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Trạng thái:</td>
+                                        <td>
+                                            <span th:if="${product.active}" class="badge bg-success">
+                                                <i class="fas fa-check"></i> Đang bán
+                                            </span>
+                                            <span th:unless="${product.active}" class="badge bg-danger">
+                                                <i class="fas fa-times"></i> Ngừng bán
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Ngày tạo:</td>
+                                        <td th:text="${#temporals.format(product.createdDate, 'dd/MM/yyyy HH:mm')}">
+                                            01/01/2024 10:00
+                                        </td>
+                                    </tr>
+                                    <tr th:if="${product.updatedDate}">
+                                        <td class="fw-bold">Cập nhật cuối:</td>
+                                        <td th:text="${#temporals.format(product.updatedDate, 'dd/MM/yyyy HH:mm')}">
+                                            01/01/2024 10:00
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mô tả sản phẩm -->
+                <div class="card mt-3" th:if="${product.description}">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-align-left"></i> Mô Tả Sản Phẩm</h6>
+                    </div>
+                    <div class="card-body">
+                        <p th:text="${product.description}" class="mb-0">
+                            Mô tả sản phẩm sẽ hiển thị ở đây...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Thống kê nhanh -->
+        <div class="row mt-3">
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Tổng Giá Trị</h5>
+                        <p class="card-text fs-4">
+                            <span th:text="${#numbers.formatDecimal(product.price * product.quantity, 0, 'COMMA', 0, 'POINT')}">0</span>₫
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Đã Bán</h5>
+                        <p class="card-text fs-4" th:text="${product.soldQuantity ?: 0}">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Doanh Thu</h5>
+                        <p class="card-text fs-6">
+                            <span th:text="${#numbers.formatDecimal((product.soldQuantity ?: 0) * product.price, 0, 'COMMA', 0, 'POINT')}">0</span>₫
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Đánh Giá</h5>
+                        <p class="card-text fs-4">
+                            <i class="fas fa-star"></i>
+                            <span th:text="${product.rating ?: 'N/A'}">N/A</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

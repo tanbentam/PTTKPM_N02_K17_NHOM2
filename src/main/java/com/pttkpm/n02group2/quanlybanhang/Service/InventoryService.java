@@ -6,39 +6,93 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class InventoryService {
 
-    private final InventoryRepository inventoryRepository;
-
     @Autowired
-    public InventoryService(InventoryRepository inventoryRepository) {
-        this.inventoryRepository = inventoryRepository;
-    }
+    private InventoryRepository inventoryRepository;
 
+    // Lấy tất cả inventory - PHƯƠNG THỨC BỊ THIẾU
     public List<Inventory> getAllInventories() {
         return inventoryRepository.findAll();
     }
 
-    public Inventory getInventoryById(Long id) {
+    // Alias cho getAllInventories
+    public List<Inventory> getAllInventoryItems() {
+        return getAllInventories();
+    }
+
+    // Lấy inventory theo ID
+    public Inventory getInventoryItemById(Long id) {
         return inventoryRepository.findById(id).orElse(null);
     }
 
-    public Inventory saveInventory(Inventory inventory) {
+    // Thêm inventory item
+    public Inventory addInventoryItem(Inventory inventory) {
         return inventoryRepository.save(inventory);
     }
 
-    public void deleteInventory(Long id) {
+    // Cập nhật inventory item
+    public Inventory updateInventoryItem(Long id, Inventory inventory) {
+        inventory.setId(id);
+        return inventoryRepository.save(inventory);
+    }
+
+    // Xóa inventory item
+    public void deleteInventoryItem(Long id) {
         inventoryRepository.deleteById(id);
     }
 
-    public void updateInventory(Long id, Inventory inventoryDetails) {
-        Inventory inventory = inventoryRepository.findById(id).orElse(null);
-        if (inventory != null) {
-            inventory.setStockLevel(inventoryDetails.getStockLevel());
-            inventory.setProduct(inventoryDetails.getProduct());
-            inventoryRepository.save(inventory);
+    // Tạo inventory mới
+    public Inventory createInventory(Inventory inventory) {
+        return inventoryRepository.save(inventory);
+    }
+
+    // Lấy inventory theo ID (Optional)
+    public Optional<Inventory> getInventoryById(Long id) {
+        return inventoryRepository.findById(id);
+    }
+
+    // Cập nhật inventory (Optional)
+    public Optional<Inventory> updateInventory(Long id, Inventory inventoryDetails) {
+        Optional<Inventory> optionalInventory = getInventoryById(id);
+        if (optionalInventory.isPresent()) {
+            Inventory inventory = optionalInventory.get();
+            
+            inventory.setProductName(inventoryDetails.getProductName());
+            inventory.setQuantity(inventoryDetails.getQuantity());
+            inventory.setUnitPrice(inventoryDetails.getUnitPrice());
+            inventory.setDescription(inventoryDetails.getDescription());
+            inventory.setCategory(inventoryDetails.getCategory());
+            
+            return Optional.of(inventoryRepository.save(inventory));
         }
+        return Optional.empty();
+    }
+
+    // Xóa inventory (boolean)
+    public boolean deleteInventory(Long id) {
+        if (inventoryRepository.existsById(id)) {
+            inventoryRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
+    // Tìm inventory theo tên sản phẩm
+    public List<Inventory> getInventoriesByProductName(String productName) {
+        return inventoryRepository.findByProductNameContainingIgnoreCase(productName);
+    }
+
+    // Tìm inventory theo danh mục
+    public List<Inventory> getInventoriesByCategory(String category) {
+        return inventoryRepository.findByCategory(category);
+    }
+
+    // Tìm inventory có số lượng thấp
+    public List<Inventory> getLowStockInventories(Integer threshold) {
+        return inventoryRepository.findByQuantityLessThan(threshold);
     }
 }

@@ -264,16 +264,21 @@
                             <input type="text" name="search" th:value="${search}" class="form-control" placeholder="Nhập tên sản phẩm...">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Danh mục</label>
-                            <select name="category" class="form-select">
-                                <option value="">Tất cả</option>
-                                <option value="electronics" th:selected="${category == 'electronics'}">Điện tử</option>
-                                <option value="clothing" th:selected="${category == 'clothing'}">Thời trang</option>
-                                <option value="home" th:selected="${category == 'home'}">Gia dụng</option>
-                                <option value="books" th:selected="${category == 'books'}">Sách</option>
-                                <option value="sports" th:selected="${category == 'sports'}">Thể thao</option>
-                            </select>
-                        </div>
+    <label class="form-label">Danh mục</label>
+    <select name="category" class="form-select">
+        <option value="">Tất cả</option>
+        <option value="electronics" th:selected="${category == 'electronics'}">Điện tử</option>
+        <option value="clothing" th:selected="${category == 'clothing'}">Thời trang</option>
+        <option value="home" th:selected="${category == 'home'}">Gia dụng</option>
+        <option value="books" th:selected="${category == 'books'}">Sách</option>
+        <option value="sports" th:selected="${category == 'sports'}">Thể thao</option>
+        <option value="cosmetics" th:selected="${category == 'cosmetics'}">Mỹ phẩm</option>
+        <option value="toys" th:selected="${category == 'toys'}">Đồ chơi</option>
+        <option value="accessories" th:selected="${category == 'accessories'}">Phụ kiện</option>
+        <option value="food" th:selected="${category == 'food'}">Thực phẩm</option>
+        <option value="furniture" th:selected="${category == 'furniture'}">Nội thất</option>
+    </select>
+</div>
                         <div class="col-md-2">
                             <label class="form-label">Trạng thái kho</label>
                             <select name="stockStatus" class="form-select">
@@ -483,13 +488,18 @@
                                 <div class="mb-3">
                                     <label class="form-label">Danh mục *</label>
                                     <select class="form-select" name="category" required>
-                                        <option value="">Chọn danh mục</option>
-                                        <option value="electronics">Điện tử</option>
-                                        <option value="clothing">Thời trang</option>
-                                        <option value="home">Gia dụng</option>
-                                        <option value="books">Sách</option>
-                                        <option value="sports">Thể thao</option>
-                                    </select>
+    <option value="">Chọn danh mục</option>
+    <option value="electronics">Điện tử</option>
+    <option value="clothing">Thời trang</option>
+    <option value="home">Gia dụng</option>
+    <option value="books">Sách</option>
+    <option value="sports">Thể thao</option>
+    <option value="cosmetics">Mỹ phẩm</option>
+    <option value="toys">Đồ chơi</option>
+    <option value="accessories">Phụ kiện</option>
+    <option value="food">Thực phẩm</option>
+    <option value="furniture">Nội thất</option>
+</select>
                                 </div>
                             </div>
                         </div>
@@ -605,14 +615,19 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Danh mục *</label>
-                                    <select class="form-select" id="edit-category" name="category" required>
-                                        <option value="">Chọn danh mục</option>
-                                        <option value="electronics">Điện tử</option>
-                                        <option value="clothing">Thời trang</option>
-                                        <option value="home">Gia dụng</option>
-                                        <option value="books">Sách</option>
-                                        <option value="sports">Thể thao</option>
-                                    </select>
+                                    <select class="form-select" name="category" required>
+    <option value="">Chọn danh mục</option>
+    <option value="electronics">Điện tử</option>
+    <option value="clothing">Thời trang</option>
+    <option value="home">Gia dụng</option>
+    <option value="books">Sách</option>
+    <option value="sports">Thể thao</option>
+    <option value="cosmetics">Mỹ phẩm</option>
+    <option value="toys">Đồ chơi</option>
+    <option value="accessories">Phụ kiện</option>
+    <option value="food">Thực phẩm</option>
+    <option value="furniture">Nội thất</option>
+</select>
                                 </div>
                             </div>
                         </div>

@@ -26,14 +26,19 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Danh mục</label>
-                                    <select class="form-select" name="category">
-                                        <option value="">Tất cả danh mục</option>
-                                        <option value="electronics" th:selected="${category == 'electronics'}">Điện tử</option>
-                                        <option value="clothing" th:selected="${category == 'clothing'}">Thời trang</option>
-                                        <option value="home" th:selected="${category == 'home'}">Gia dụng</option>
-                                        <option value="books" th:selected="${category == 'books'}">Sách</option>
-                                        <option value="sports" th:selected="${category == 'sports'}">Thể thao</option>
-                                    </select>
+                                    <select class="form-select" name="category" required>
+    <option value="">Chọn danh mục</option>
+    <option value="electronics">Điện tử</option>
+    <option value="clothing">Thời trang</option>
+    <option value="home">Gia dụng</option>
+    <option value="books">Sách</option>
+    <option value="sports">Thể thao</option>
+    <option value="cosmetics">Mỹ phẩm</option>
+    <option value="toys">Đồ chơi</option>
+    <option value="accessories">Phụ kiện</option>
+    <option value="food">Thực phẩm</option>
+    <option value="furniture">Nội thất</option>
+</select>
                                 </div>
                             </div>
                         </div>
@@ -121,13 +126,18 @@
                                 <div class="mb-3">
                                     <label class="form-label">Danh mục *</label>
                                     <select class="form-select" name="category" required>
-                                        <option value="">Chọn danh mục</option>
-                                        <option value="electronics">Điện tử</option>
-                                        <option value="clothing">Thời trang</option>
-                                        <option value="home">Gia dụng</option>
-                                        <option value="books">Sách</option>
-                                        <option value="sports">Thể thao</option>
-                                    </select>
+    <option value="">Chọn danh mục</option>
+    <option value="electronics">Điện tử</option>
+    <option value="clothing">Thời trang</option>
+    <option value="home">Gia dụng</option>
+    <option value="books">Sách</option>
+    <option value="sports">Thể thao</option>
+    <option value="cosmetics">Mỹ phẩm</option>
+    <option value="toys">Đồ chơi</option>
+    <option value="accessories">Phụ kiện</option>
+    <option value="food">Thực phẩm</option>
+    <option value="furniture">Nội thất</option>
+</select>
                                 </div>
                             </div>
                         </div>

@@ -146,7 +146,7 @@
             </a>
             
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/user/view-transactions">
+                <a class="nav-link" href="/user/pos/history">
                     <i class="fas fa-history"></i> Lịch Sử Giao Dịch
                 </a>
                 <a class="nav-link" href="/user/dashboard">
@@ -343,19 +343,19 @@
                         <h6><i class="fas fa-user-plus"></i> Thêm Khách Hàng Mới</h6>
                         <div class="row">
                             <div class="col-md-6 mb-2">
-                                <input type="text" class="form-control" id="customerName" placeholder="Tên khách hàng">
+                                <input type="text" class="form-control" id="customerName" placeholder="Tên khách hàng (bắt buộc)">
                             </div>
                             <div class="col-md-6 mb-2">
-                                <input type="tel" class="form-control" id="customerPhone" placeholder="Số điện thoại">
+                                <input type="tel" class="form-control" id="customerPhone" placeholder="Số điện thoại (bắt buộc)">
                             </div>
                         </div>
                         <div class="mb-2">
-                            <input type="text" class="form-control" id="customerAddress" placeholder="Địa chỉ">
+                            <input type="text" class="form-control" id="customerAddress" placeholder="Địa chỉ chi tiết (số nhà, đường) - tùy chọn">
                         </div>
                         <div class="row mb-2">
                             <div class="col-md-4 mb-2">
                                 <select class="form-control" id="customerCity" onchange="updateDistricts()">
-                                    <option value="">Chọn thành phố</option>
+                                    <option value="">Chọn tỉnh/thành phố</option>
                                     <option value="Hà Nội">Hà Nội</option>
                                     <option value="Hồ Chí Minh">Hồ Chí Minh</option>
                                     <option value="Đà Nẵng">Đà Nẵng</option>
@@ -364,12 +364,17 @@
                                 </select>
                             </div>
                             <div class="col-md-4 mb-2">
+                                <input type="text" class="form-control" id="customerWard" placeholder="Phường/xã - tùy chọn">
+                            </div>
+                            <div class="col-md-4 mb-2">
                                 <select class="form-control" id="customerDistrict">
                                     <option value="">Chọn quận/huyện</option>
                                 </select>
                             </div>
-                            <div class="col-md-4 mb-2">
-                                <input type="date" class="form-control" id="customerDob" placeholder="Ngày sinh">
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-6 mb-2">
+                                <input type="date" class="form-control" id="customerDob" placeholder="Ngày sinh - tùy chọn">
                             </div>
                         </div>
                     </div>
@@ -478,6 +483,11 @@
         <input type="hidden" name="customerId" id="customerIdInput">
         <input type="hidden" name="customerName" id="customerNameInput">
         <input type="hidden" name="customerPhone" id="customerPhoneInput">
+        <input type="hidden" name="customerAddress" id="customerAddressInput">
+        <input type="hidden" name="customerWard" id="customerWardInput">
+        <input type="hidden" name="customerDistrict" id="customerDistrictInput">
+        <input type="hidden" name="customerProvince" id="customerProvinceInput">
+        <input type="hidden" name="customerDob" id="customerDobInput">
         <input type="hidden" name="cartData" id="cartDataInput">
         <input type="hidden" name="customerData" id="customerDataInput">
         <input type="hidden" name="createVipRequest" id="createVipRequestInput" value="false">
@@ -543,42 +553,6 @@
                 .catch(error => {
                     console.error('Lỗi tải danh mục:', error);
                     showAlert('Không thể tải danh mục từ database!', 'error');
-                    // Fallback: danh mục cứng nếu cần
-                    const categoryContainer = document.getElementById('categoryContainer');
-                    categoryContainer.innerHTML = `
-                        <button class="btn btn-outline-primary category-btn active" 
-                                onclick="filterByCategory('', this)" data-category="">
-                            <i class="fas fa-th-large"></i> Tất cả
-                        </button>
-                        <button class="btn btn-outline-primary category-btn" 
-                                onclick="filterByCategory('Điện tử', this)" data-category="Điện tử">
-                            <i class="fas fa-mobile-alt"></i> Điện tử
-                        </button>
-                        <button class="btn btn-outline-primary category-btn" 
-                                onclick="filterByCategory('Thời trang', this)" data-category="Thời trang">
-                            <i class="fas fa-tshirt"></i> Thời trang
-                        </button>
-                        <button class="btn btn-outline-primary category-btn" 
-                                onclick="filterByCategory('Gia dụng', this)" data-category="Gia dụng">
-                            <i class="fas fa-home"></i> Gia dụng
-                        </button>
-                        <button class="btn btn-outline-primary category-btn" 
-                                onclick="filterByCategory('Sách', this)" data-category="Sách">
-                            <i class="fas fa-book"></i> Sách
-                        </button>
-                        <button class="btn btn-outline-primary category-btn" 
-                                onclick="filterByCategory('Thể thao', this)" data-category="Thể thao">
-                            <i class="fas fa-futbol"></i> Thể thao
-                        </button>
-                        <button class="btn btn-outline-primary category-btn" 
-                                onclick="filterByCategory('Thực phẩm', this)" data-category="Thực phẩm">
-                            <i class="fas fa-apple-alt"></i> Thực phẩm
-                        </button>
-                        <button class="btn btn-outline-primary category-btn" 
-                                onclick="filterByCategory('Đồ uống', this)" data-category="Đồ uống">
-                            <i class="fas fa-coffee"></i> Đồ uống
-                        </button>
-                    `;
                 });
         }
 
@@ -852,118 +826,137 @@
         }
 
         // Display customer search results
-        function displayCustomerSearchResults(customers) {
-            const searchResults = document.getElementById('searchResults');
-            const customerList = document.getElementById('customerList');
+        // Display customer search results
+function displayCustomerSearchResults(customers) {
+    const searchResults = document.getElementById('searchResults');
+    const customerList = document.getElementById('customerList');
+    
+    if (customers.length === 0) {
+        customerList.innerHTML = '<div class="list-group-item text-muted">Không tìm thấy khách hàng nào</div>';
+    } else {
+        customerList.innerHTML = customers.map(customer => {
+            const vipBadge = customer.vip ? '<span class="badge bg-warning ms-2">VIP</span>' : '';
+            const pendingBadge = customer.pendingVip ? '<span class="badge bg-info ms-2">Chờ duyệt</span>' : '';
             
-            if (customers.length === 0) {
-                customerList.innerHTML = '<div class="list-group-item text-muted">Không tìm thấy khách hàng nào</div>';
-            } else {
-                customerList.innerHTML = customers.map(customer => {
-                    const vipBadge = customer.vip ? '<span class="badge bg-warning ms-2">VIP</span>' : '';
-                    const pendingBadge = customer.pendingVip ? '<span class="badge bg-info ms-2">Chờ duyệt</span>' : '';
-                    
-                    return `
-                        <div class="list-group-item list-group-item-action" onclick="selectCustomerFromList(${customer.id}, '${customer.name}', '${customer.phone || ''}', ${customer.vip}, ${customer.vipDiscountPercent || 0}, ${customer.pendingVip})">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-1">${customer.name} ${vipBadge} ${pendingBadge}</h6>
-                                    <small class="text-muted">${customer.phone || 'Chưa có SĐT'}</small>
-                                </div>
-                                <small class="text-muted">Chọn</small>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+            // Format date properly
+            let dobStr = 'null';
+            if (customer.dateOfBirth) {
+                if (Array.isArray(customer.dateOfBirth)) {
+                    dobStr = `${customer.dateOfBirth[0]}-${String(customer.dateOfBirth[1]).padStart(2, '0')}-${String(customer.dateOfBirth[2]).padStart(2, '0')}`;
+                } else {
+                    dobStr = customer.dateOfBirth;
+                }
             }
             
-            searchResults.style.display = 'block';
-        }
+            return `
+                <div class="list-group-item list-group-item-action" onclick="selectExistingCustomer('${customer.id}', '${customer.name}', '${customer.phone || ''}', '${customer.address || ''}', '${customer.ward || ''}', '${customer.district || ''}', '${customer.province || ''}', '${dobStr}', ${customer.vip}, ${customer.vipDiscountPercent || 0}, ${customer.pendingVip})">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${customer.name} ${vipBadge} ${pendingBadge}</h6>
+                            <small class="text-muted">${customer.phone || 'Chưa có SĐT'}</small>
+                            ${customer.dateOfBirth ? `<br><small class="text-info">Sinh: ${formatDateDisplay(customer.dateOfBirth)}</small>` : ''}
+                        </div>
+                        <small class="text-muted">Chọn</small>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    searchResults.style.display = 'block';
+}
 
-        // Select customer from search results
-        function selectCustomerFromList(id, name, phone, isVip, vipDiscountPercent, isPendingVip) {
-            selectedCustomer = {
-                id: id,
-                name: name,
-                phone: phone,
-                vip: isVip,
-                vipDiscountPercent: vipDiscountPercent || 0,
-                pendingVip: isPendingVip || false
-            };
-            
-            updateCustomerDisplay();
-            
-            // Close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
-            modal.hide();
-            
-            showAlert(`Đã chọn khách hàng: ${name}`, 'success');
-        }
 
-        // Select guest customer
-        // ...existing code...
-// ...existing code...
-function selectGuestCustomer() {
-    // Không bắt buộc nhập tên/số điện thoại, chỉ lưu là khách lẻ
+// Add this function before the existing functions
+function formatDateDisplay(dateValue) {
+    if (!dateValue) return '';
+    
+    if (Array.isArray(dateValue) && dateValue.length >= 3) {
+        return `${String(dateValue[2]).padStart(2, '0')}/${String(dateValue[1]).padStart(2, '0')}/${dateValue[0]}`;
+    } else if (typeof dateValue === 'string') {
+        try {
+            const date = new Date(dateValue);
+            return date.toLocaleDateString('vi-VN');
+        } catch (e) {
+            return dateValue;
+        }
+    }
+    return dateValue;
+}
+        // Select existing customer from search results
+function selectExistingCustomer(id, name, phone, address, ward, district, province, dateOfBirth, isVip, vipDiscountPercent, isPendingVip) {
+    let dob = dateOfBirth;
+    if (dob && /^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+        const [y, m, d] = dob.split('-');
+        dob = `${d}/${m}/${y}`;
+    }
     selectedCustomer = {
-        id: null,
-        name: 'Khách lẻ',
-        phone: null,  // Đặt phone là null để tránh lỗi khi lưu
-        address: null,
-        city: null,
-        district: null,
-        dob: null,
-        vip: false,
-        vipDiscountPercent: 0,
-        pendingVip: false
+        id: id,
+        name: name,
+        phone: phone,
+        address: address,
+        ward: ward,
+        district: district,
+        province: province,
+        dateOfBirth: dob && dob !== 'null' && dob !== '' ? dob : null,
+        vip: isVip,
+        vipDiscountPercent: vipDiscountPercent || 0,
+        pendingVip: isPendingVip || false
     };
-
     updateCustomerDisplay();
-
+    
     // Close modal
     const modal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
     modal.hide();
-
-    showAlert('Đã chọn khách lẻ', 'info');
+    
+    showAlert(`Đã chọn khách hàng: ${name}`, 'success');
 }
-// ...existing code...
+        // Select guest customer
+        function selectGuestCustomer() {
+            selectedCustomer = null;
+            updateCustomerDisplay();
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
+            modal.hide();
+
+            showAlert('Đã chọn khách lẻ', 'info');
+        }
+
         // Save and select customer
         function saveAndSelectCustomer() {
             const name = document.getElementById('customerName').value.trim();
-            const phone = document.getElementById('customerPhone').value.trim();
-            const address = document.getElementById('customerAddress').value.trim();
-            const city = document.getElementById('customerCity').value.trim();
-            const district = document.getElementById('customerDistrict').value.trim();
-            const dob = document.getElementById('customerDob').value;
+    const phone = document.getElementById('customerPhone').value.trim();
+    const address = document.getElementById('customerAddress').value.trim();
+    const ward = document.getElementById('customerWard').value.trim();
+    const district = document.getElementById('customerDistrict').value.trim();
+    const city = document.getElementById('customerCity').value.trim();
+    let dob = document.getElementById('customerDob').value;
 
-            // Kiểm tra thông tin cơ bản (chỉ bắt buộc tên và SĐT cho khách thường)
+    // Convert yyyy-MM-dd (input type="date") to dd/MM/yyyy
+    if (dob && /^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+        const [y, m, d] = dob.split('-');
+        dob = `${d}/${m}/${y}`;
+    }
+
+            // Kiểm tra thông tin bắt buộc
             if (!name) {
                 showAlert('Vui lòng nhập tên khách hàng!', 'warning');
                 return;
             }
             if (!phone || phone.length < 10) {
-                showAlert('Vui lòng nhập số điện thoại hợp lệ!', 'warning');
+                showAlert('Vui lòng nhập số điện thoại hợp lệ (ít nhất 10 số)!', 'warning');
                 return;
             }
 
-            // Tạo customerData gửi lên server (các trường tùy chọn có thể để trống)
-            const customerData = {
-                name: name,
-                phone: phone,
-                address: address || '',
-                city: city || '',
-                district: district || '',
-                dob: dob || ''
-            };
-            
             // Call API to create customer
             fetch('/user/pos/customer/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `fullName=${encodeURIComponent(name)}&phoneNumber=${encodeURIComponent(phone)}&address=${encodeURIComponent(address)}&city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}&dob=${encodeURIComponent(dob)}`
-            })
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `fullName=${encodeURIComponent(name)}&phoneNumber=${encodeURIComponent(phone)}&address=${encodeURIComponent(address)}&ward=${encodeURIComponent(ward)}&district=${encodeURIComponent(district)}&province=${encodeURIComponent(city)}&dob=${encodeURIComponent(dob)}`
+    })
             .then(response => response.json())
             .then(result => {
                 if (result.success) {
@@ -972,13 +965,14 @@ function selectGuestCustomer() {
                         id: customer.id,
                         name: customer.name,
                         phone: customer.phone,
+                        address: customer.address || '',
+                        ward: customer.ward || '',
+                        district: customer.district || '',
+                        province: customer.province || '',
+                        dateOfBirth: customer.dateOfBirth || '',
                         vip: customer.vip || false,
                         vipDiscountPercent: customer.vipDiscountPercent || 0,
-                        pendingVip: customer.pendingVip || false,
-                        address: customer.address || '',
-                        city: customer.city || '',
-                        district: customer.district || '',
-                        dob: customer.dob || ''
+                        pendingVip: customer.pendingVip || false
                     };
                     
                     updateCustomerDisplay();
@@ -990,12 +984,7 @@ function selectGuestCustomer() {
                     showAlert(`Đã tạo và chọn khách hàng: ${customer.name}`, 'success');
                     
                     // Clear form
-                    document.getElementById('customerName').value = '';
-                    document.getElementById('customerPhone').value = '';
-                    document.getElementById('customerAddress').value = '';
-                    document.getElementById('customerCity').value = '';
-                    document.getElementById('customerDistrict').value = '';
-                    document.getElementById('customerDob').value = '';
+                    clearCustomerForm();
                 } else {
                     showAlert(result.message || 'Có lỗi xảy ra khi tạo khách hàng!', 'error');
                 }
@@ -1004,6 +993,17 @@ function selectGuestCustomer() {
                 console.error('Error creating customer:', error);
                 showAlert('Có lỗi xảy ra khi tạo khách hàng!', 'error');
             });
+        }
+
+        // Clear customer form
+        function clearCustomerForm() {
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('customerAddress').value = '';
+            document.getElementById('customerWard').value = '';
+            document.getElementById('customerCity').value = '';
+            document.getElementById('customerDistrict').innerHTML = '<option value="">Chọn quận/huyện</option>';
+            document.getElementById('customerDob').value = '';
         }
 
         // Update customer display
@@ -1041,84 +1041,102 @@ function selectGuestCustomer() {
 
         // ==================== PAYMENT FUNCTIONS ====================
 
-        // Hàm lấy thông tin khách hàng đã chọn
-        function getSelectedCustomer() {
-            return selectedCustomer;
-        }
+        // Process payment
+        function processPayment() {
+    const paymentBtn = document.getElementById('paymentBtn');
 
-        // Hàm lấy tổng tiền giỏ hàng
-        function getCartTotalAmount() {
-            return cart.reduce((sum, item) => sum + item.total, 0);
-        }
-
-// Hàm xử lý thanh toán (chỉnh để gửi AJAX đến /user/pos/process-order)
-function processPayment() {
-    const customer = getSelectedCustomer();
+    // Chặn double submit
+    if (paymentBtn.disabled) return;
+    paymentBtn.disabled = true;
 
     // Kiểm tra giỏ hàng
     if (cart.length === 0) {
         showAlert('Giỏ hàng trống! Vui lòng thêm sản phẩm trước khi thanh toán.', 'warning');
+        paymentBtn.disabled = false;
         return;
     }
 
-    // Nếu không phải khách lẻ, yêu cầu tên và SĐT
-    if (!customer || customer.id !== null) {
-        if (!customer || !customer.name || !customer.phone) {
-            showAlert('Vui lòng nhập đầy đủ tên và số điện thoại khách hàng!', 'warning');
-            return;
+    // Chuẩn hóa ngày sinh
+    let dobValue = '';
+if (selectedCustomer && selectedCustomer.dateOfBirth) {
+    // Giữ nguyên định dạng dd/MM/yyyy
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(selectedCustomer.dateOfBirth)) {
+        // Đã đúng định dạng dd/MM/yyyy
+        dobValue = selectedCustomer.dateOfBirth;
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(selectedCustomer.dateOfBirth)) {
+        // Chuyển từ yyyy-MM-dd sang dd/MM/yyyy
+        const [y, m, d] = selectedCustomer.dateOfBirth.split('-');
+        dobValue = `${d}/${m}/${y}`;
+    } else if (Array.isArray(selectedCustomer.dateOfBirth) && selectedCustomer.dateOfBirth.length >= 3) {
+        // Chuyển từ array [yyyy, mm, dd] sang dd/MM/yyyy
+        dobValue = `${String(selectedCustomer.dateOfBirth[2]).padStart(2, '0')}/${String(selectedCustomer.dateOfBirth[1]).padStart(2, '0')}/${selectedCustomer.dateOfBirth[0]}`;
+    } else if (typeof selectedCustomer.dateOfBirth === 'string') {
+        // Thử parse ISO string và chuyển sang dd/MM/yyyy
+        const d = new Date(selectedCustomer.dateOfBirth);
+        if (!isNaN(d)) {
+            dobValue = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        } else {
+            dobValue = selectedCustomer.dateOfBirth;
         }
     }
+}
 
-    // Nếu là khách VIP, yêu cầu đầy đủ thông tin
-    if (customer && customer.vip) {
-        if (!customer.address || !customer.city || !customer.district || !customer.dob) {
-            showAlert('Khách VIP phải nhập đầy đủ địa chỉ, thành phố, quận/huyện và ngày sinh!', 'warning');
-            return;
-        }
+    // Fill form data
+    if (selectedCustomer) {
+        document.getElementById('customerIdInput').value = selectedCustomer.id || '';
+        document.getElementById('customerNameInput').value = selectedCustomer.name || '';
+        document.getElementById('customerPhoneInput').value = selectedCustomer.phone || '';
+        document.getElementById('customerAddressInput').value = selectedCustomer.address || '';
+        document.getElementById('customerWardInput').value = selectedCustomer.ward || '';
+        document.getElementById('customerDistrictInput').value = selectedCustomer.district || '';
+        document.getElementById('customerProvinceInput').value = selectedCustomer.province || '';
+        document.getElementById('customerDobInput').value = dobValue;
+        document.getElementById('customerDataInput').value = JSON.stringify({
+            ...selectedCustomer,
+            dateOfBirth: dobValue
+        });
+    } else {
+        // Khách lẻ
+        document.getElementById('customerIdInput').value = '';
+        document.getElementById('customerNameInput').value = 'Khách lẻ';
+        document.getElementById('customerPhoneInput').value = '';
+        document.getElementById('customerAddressInput').value = '';
+        document.getElementById('customerWardInput').value = '';
+        document.getElementById('customerDistrictInput').value = '';
+        document.getElementById('customerProvinceInput').value = '';
+        document.getElementById('customerDobInput').value = '';
+        document.getElementById('customerDataInput').value = JSON.stringify({
+            id: null,
+            name: 'Khách lẻ',
+            phone: '',
+            address: '',
+            ward: '',
+            district: '',
+            province: '',
+            dateOfBirth: '',
+            vip: false,
+            vipDiscountPercent: 0,
+            pendingVip: false
+        });
     }
 
-    document.getElementById('customerIdInput').value = customer.id || '';
-    document.getElementById('customerNameInput').value = customer.name;
-    document.getElementById('customerPhoneInput').value = customer.phone;
     document.getElementById('cartDataInput').value = JSON.stringify(cart);
-    document.getElementById('customerDataInput').value = JSON.stringify(customer);
+
+    // Check if should create VIP request
+    const subtotalAmount = cart.reduce((sum, item) => sum + item.total, 0);
+    const shouldCreateVipRequest = selectedCustomer &&
+        selectedCustomer.id &&
+        subtotalAmount >= 2000000 &&
+        !selectedCustomer.vip &&
+        !selectedCustomer.pendingVip;
+    document.getElementById('createVipRequestInput').value = shouldCreateVipRequest ? 'true' : 'false';
+
+    // Debug log
+    console.log('Submit customer DOB:', dobValue);
 
     // Submit form để chuyển sang trang payment
     document.getElementById('checkoutForm').submit();
 }
-
-        // Update product quantities in UI after successful order
-        function updateProductQuantitiesInUI() {
-            cart.forEach(cartItem => {
-                const productCard = document.querySelector(`[data-product-id="${cartItem.id}"]`);
-                if (productCard) {
-                    const currentQuantity = parseInt(productCard.getAttribute('data-product-quantity'));
-                    const newQuantity = currentQuantity - cartItem.quantity;
-                    
-                    productCard.setAttribute('data-product-quantity', newQuantity);
-                    
-                    // Update display
-                    const badge = productCard.querySelector('.badge');
-                    if (badge) {
-                        badge.textContent = `Còn: ${newQuantity}`;
-                        badge.className = newQuantity > 0 ? 'badge bg-success' : 'badge bg-danger';
-                    }
-                    
-                    // Add out-of-stock class if needed
-                    const productItem = productCard.closest('.product-item');
-                    if (newQuantity <= 0) {
-                        productItem.classList.add('out-of-stock');
-                        const warningDiv = productCard.querySelector('.text-danger');
-                        if (!warningDiv) {
-                            const cardBody = productCard.querySelector('.card-body');
-                            cardBody.insertAdjacentHTML('beforeend', 
-                                '<div class="text-danger small"><i class="fas fa-exclamation-triangle"></i> Hết hàng</div>');
-                        }
-                    }
-                }
-            });
-        }
-
         // Reset POS for new order
         function resetPOS() {
             cart = [];
@@ -1129,11 +1147,11 @@ function processPayment() {
             // Clear search results
             document.getElementById('searchResults').style.display = 'none';
             document.getElementById('searchCustomerInput').value = '';
+            clearCustomerForm();
         }
 
         // Print receipt
         function printReceipt() {
-            // Simple print functionality
             window.print();
         }
 
@@ -1148,14 +1166,12 @@ function processPayment() {
             const noProductsDiv = document.getElementById('noProductsFound');
 
             if (category === '') {
-                // Gọi lại API để lấy toàn bộ sản phẩm
                 loadAllProducts();
                 resultCount.style.display = 'none';
                 noProductsDiv.style.display = 'none';
                 return;
             }
 
-            // Gọi API lấy sản phẩm theo danh mục
             fetch(`/user/pos/search-by-category?category=${encodeURIComponent(category)}`)
                 .then(res => res.json())
                 .then(products => {
@@ -1173,11 +1189,11 @@ function processPayment() {
                 });
         }
 
-        // Hàm render lại danh sách sản phẩm
+        // Render products
         function renderProducts(products) {
             const productGrid = document.getElementById('productGrid').querySelector('.row');
             productGrid.innerHTML = products.map(product => `
-                <div class="col-md-3 product-item" data-category="${product.category}">
+                <div class="col-md-3 product-item ${product.quantity <= 0 ? 'out-of-stock' : ''}" data-category="${product.category}">
                     <div class="card product-card h-100"
                         data-product-id="${product.id}"
                         data-product-name="${product.name}"
@@ -1197,7 +1213,7 @@ function processPayment() {
                             </div>
                             ${product.quantity <= 0 ? '<div class="text-danger small"><i class="fas fa-exclamation-triangle"></i> Hết hàng</div>' : ''}
                             <div class="mt-2">
-                                <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); addToCartFromCard(this.parentElement.parentElement.parentElement)">
+                                <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); addToCartFromCard(this.parentElement.parentElement.parentElement)" ${product.quantity <= 0 ? 'disabled' : ''}>
                                     <i class="fas fa-plus"></i> +1
                                 </button>
                             </div>
@@ -1209,43 +1225,34 @@ function processPayment() {
 
         // Product search function
         function performProductSearch(searchTerm) {
-            const productItems = document.querySelectorAll('.product-item');
-            let visibleCount = 0;
-            
-            productItems.forEach(item => {
-                const card = item.querySelector('.product-card');
-                const productName = card.getAttribute('data-product-name').toLowerCase();
-                const productId = card.getAttribute('data-product-id');
-                
-                if (searchTerm === '' || 
-                    productName.includes(searchTerm.toLowerCase()) || 
-                    productId.includes(searchTerm)) {
-                    item.style.display = 'block';
-                    visibleCount++;
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-            
-            // Update result count
-            const resultCount = document.getElementById('searchResultCount');
-            if (searchTerm === '') {
-                resultCount.style.display = 'none';
-                // Reset category filter
-                document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
-                document.querySelector('.category-btn[data-category=""]').classList.add('active');
-            } else {
-                resultCount.style.display = 'block';
-                resultCount.textContent = `Tìm thấy ${visibleCount} sản phẩm cho "${searchTerm}"`;
+            if (searchTerm.trim() === '') {
+                clearSearch();
+                return;
             }
-            
-            // Show/hide no products message
-            const noProductsDiv = document.getElementById('noProductsFound');
-            if (visibleCount === 0) {
-                noProductsDiv.style.display = 'block';
-            } else {
-                noProductsDiv.style.display = 'none';
-            }
+
+            fetch(`/user/pos/search?query=${encodeURIComponent(searchTerm)}`)
+                .then(res => res.json())
+                .then(products => {
+                    renderProducts(products);
+                    
+                    const resultCount = document.getElementById('searchResultCount');
+                    const noProductsDiv = document.getElementById('noProductsFound');
+                    
+                    resultCount.style.display = 'block';
+                    resultCount.textContent = `Tìm thấy ${products.length} sản phẩm cho "${searchTerm}"`;
+                    
+                    if (products.length === 0) {
+                        noProductsDiv.style.display = 'block';
+                    } else {
+                        noProductsDiv.style.display = 'none';
+                    }
+                    
+                    // Reset category filter
+                    document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+                })
+                .catch(error => {
+                    showAlert('Lỗi tìm kiếm sản phẩm!', 'error');
+                });
         }
 
         // Clear search function
@@ -1254,10 +1261,8 @@ function processPayment() {
             document.getElementById('searchResultCount').style.display = 'none';
             document.getElementById('noProductsFound').style.display = 'none';
             
-            // Show all products
-            document.querySelectorAll('.product-item').forEach(item => {
-                item.style.display = 'block';
-            });
+            // Load all products
+            loadAllProducts();
             
             // Reset category filter
             document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
@@ -1277,7 +1282,6 @@ function processPayment() {
 
         // Show alert
         function showAlert(message, type = 'info') {
-            // Create alert element
             const alertClass = {
                 'success': 'alert-success',
                 'error': 'alert-danger',
@@ -1301,10 +1305,8 @@ function processPayment() {
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             
-            // Add to body
             document.body.appendChild(alertDiv);
             
-            // Auto remove after 5 seconds
             setTimeout(() => {
                 if (alertDiv && alertDiv.parentNode) {
                     alertDiv.remove();
@@ -1313,26 +1315,27 @@ function processPayment() {
         }
 
         // Handle keyboard shortcuts
+    
         document.addEventListener('keydown', function(e) {
-            // F1 - Toggle customer modal
+
             if (e.key === 'F1') {
                 e.preventDefault();
                 toggleCustomerModal();
             }
             
-            // F2 - Focus search
+
             if (e.key === 'F2') {
                 e.preventDefault();
                 document.getElementById('searchProduct').focus();
             }
             
-            // F3 - Clear cart
+
             if (e.key === 'F3') {
                 e.preventDefault();
                 clearCart();
             }
             
-            // Enter - Process payment (if cart not empty)
+
             if (e.key === 'Enter' && e.ctrlKey && cart.length > 0) {
                 e.preventDefault();
                 processPayment();

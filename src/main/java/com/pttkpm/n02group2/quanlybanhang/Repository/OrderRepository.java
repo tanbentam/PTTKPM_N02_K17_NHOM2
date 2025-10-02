@@ -13,6 +13,7 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
     
+    List<Order> findByCreatedBy(String username);
     // Tìm đơn hàng theo khoảng thời gian và trạng thái (cho POSService)
     List<Order> findByCreatedAtBetweenAndStatus(LocalDateTime startDate, LocalDateTime endDate, Order.OrderStatus status);
 
@@ -32,6 +33,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
     
     // ==================== COUNT METHODS ====================
+    // Thêm method này để lấy đơn hàng theo customerId và sắp xếp theo ngày tạo
+    List<Order> findByCustomerIdOrderByOrderDateAsc(Long customerId);
     
     // Đếm đơn hàng theo trạng thái
     long countByStatus(Order.OrderStatus status);

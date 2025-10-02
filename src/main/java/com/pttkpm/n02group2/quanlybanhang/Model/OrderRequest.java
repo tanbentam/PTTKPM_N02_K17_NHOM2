@@ -18,6 +18,7 @@ public class OrderRequest {
         private Long id;
         private String name;
         private String phone;
+        private String email; // THÊM FIELD NÀY
         private String address;
         
         @JsonFormat(pattern = "yyyy-MM-dd")
@@ -49,6 +50,10 @@ public class OrderRequest {
 
         public String getPhone() { return phone; }
         public void setPhone(String phone) { this.phone = phone; }
+
+        // THÊM GETTER VÀ SETTER CHO EMAIL
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
 
         public String getAddress() { return address; }
         public void setAddress(String address) { this.address = address; }
@@ -116,6 +121,16 @@ public class OrderRequest {
 
         public Integer getStock() { return stock; }
         public void setStock(Integer stock) { this.stock = stock; }
+    }
+
+    private String paymentMethod;
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 
     // Constructors

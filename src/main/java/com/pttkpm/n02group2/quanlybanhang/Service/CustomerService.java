@@ -2,6 +2,8 @@ package com.pttkpm.n02group2.quanlybanhang.Service;
 
 import com.pttkpm.n02group2.quanlybanhang.Model.Customer;
 import com.pttkpm.n02group2.quanlybanhang.Repository.CustomerRepository;
+import com.pttkpm.n02group2.quanlybanhang.Repository.OrderRepository;
+import com.pttkpm.n02group2.quanlybanhang.Model.Order; // Thêm import này
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,16 +23,25 @@ public class CustomerService {
     private CustomerRepository customerRepository;
 
     // ==================== BASIC CRUD OPERATIONS ====================
+    public List<Customer> findAll() {
+        return customerRepository.findAll();
+    }
     
     @Transactional
     public Customer saveCustomer(Customer customer) {
         try {
+            System.out.println("=== CustomerService.saveCustomer() DEBUG ===");
+            System.out.println("Input customer:");
+            System.out.println("- Name: " + customer.getName());
+            System.out.println("- Phone: " + customer.getPhone());
+            System.out.println("- Date of Birth: " + customer.getDateOfBirth());
+            
             // Validate dữ liệu
             if (customer.getName() == null || customer.getName().trim().isEmpty()) {
                 throw new RuntimeException("Tên khách hàng không được để trống");
             }
 
-            // Set default values nếu null
+            // Set default values nếu null (NHƯNG KHÔNG ĐỘNG VÀO dateOfBirth)
             if (customer.getPhone() == null) customer.setPhone("");
             if (customer.getProvince() == null) customer.setProvince("");
             if (customer.getDistrict() == null) customer.setDistrict("");
@@ -41,6 +52,9 @@ public class CustomerService {
             if (customer.getOrderCount() == null) customer.setOrderCount(0);
             if (customer.getIsVip() == null) customer.setIsVip(false);
 
+            // QUAN TRỌNG: KHÔNG SET DEFAULT CHO dateOfBirth - GIỮ NGUYÊN GIÁ TRỊ HIỆN TẠI
+            System.out.println("dateOfBirth before save: " + customer.getDateOfBirth());
+
             // Set timestamps
             if (customer.getId() == null) {
                 // New customer
@@ -49,18 +63,30 @@ public class CustomerService {
             customer.setUpdatedAt(LocalDateTime.now());
 
             Customer savedCustomer = customerRepository.save(customer);
+            
             System.out.println("✅ Đã lưu khách hàng: " + savedCustomer.getId() + " - " + savedCustomer.getName());
+            System.out.println("dateOfBirth after save: " + savedCustomer.getDateOfBirth());
+            System.out.println("=== END CustomerService.saveCustomer() ===");
+            
             return savedCustomer;
             
         } catch (Exception e) {
             System.err.println("❌ Lỗi lưu khách hàng: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Không thể lưu khách hàng: " + e.getMessage());
         }
     }
-    
+        
     public Customer createCustomer(Customer customer) {
-        // Sử dụng saveCustomer để có validation
-        return saveCustomer(customer);
+        System.out.println("=== CustomerService.createCustomer() DEBUG ===");
+        System.out.println("Input customer dateOfBirth: " + customer.getDateOfBirth());
+        
+        Customer result = saveCustomer(customer);
+        
+        System.out.println("Result customer dateOfBirth: " + result.getDateOfBirth());
+        System.out.println("=== END createCustomer() ===");
+        
+        return result;
     }
 
     @Transactional
@@ -69,6 +95,10 @@ public class CustomerService {
         if (existingCustomer.isPresent()) {
             Customer customerToUpdate = existingCustomer.get();
             
+            System.out.println("=== CustomerService.updateCustomer() DEBUG ===");
+            System.out.println("Existing customer DOB: " + customerToUpdate.getDateOfBirth());
+            System.out.println("New customer DOB: " + customer.getDateOfBirth());
+            
             // Cập nhật thông tin
             customerToUpdate.setName(customer.getName());
             customerToUpdate.setPhone(customer.getPhone());
@@ -76,7 +106,14 @@ public class CustomerService {
             customerToUpdate.setDistrict(customer.getDistrict());
             customerToUpdate.setWard(customer.getWard());
             customerToUpdate.setAddress(customer.getAddress());
-            customerToUpdate.setDateOfBirth(customer.getDateOfBirth());
+            
+            // XỬ LÝ dateOfBirth CẨN THẬN
+            if (customer.getDateOfBirth() != null) {
+                customerToUpdate.setDateOfBirth(customer.getDateOfBirth());
+                System.out.println("✅ Updated dateOfBirth to: " + customer.getDateOfBirth());
+            } else {
+                System.out.println("⚠️ New dateOfBirth is null, keeping existing: " + customerToUpdate.getDateOfBirth());
+            }
             
             // Giữ nguyên thông tin VIP và order stats
             if (customer.getTotalSpent() != null) {
@@ -92,22 +129,65 @@ public class CustomerService {
                 customerToUpdate.setVipDiscountPercent(customer.getVipDiscountPercent());
             }
             
-            return saveCustomer(customerToUpdate);
+            Customer result = saveCustomer(customerToUpdate);
+            System.out.println("Final result DOB: " + result.getDateOfBirth());
+            System.out.println("=== END updateCustomer() ===");
+            
+            return result;
         }
         throw new RuntimeException("Customer not found with id: " + id);
     }
-
+    
     public Optional<Customer> getCustomerById(Long id) {
         return customerRepository.findById(id);
     }
 
     public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+        try {
+            List<Customer> customers = customerRepository.findAll();
+            System.out.println("CustomerService.getAllCustomers(): Found " + customers.size() + " customers");
+            return customers;
+        } catch (Exception e) {
+            System.err.println("Error in getAllCustomers(): " + e.getMessage());
+            e.printStackTrace();
+            return List.of(); // Trả về danh sách trống nếu lỗi
+        }
     }
+
+    // ==================== VIP CONDITION METHODS ====================
+    
+    /**
+     * Tính tổng số tiền đã mua của khách hàng theo ID.
+     * TODO: Cần liên kết với OrderService để tính thực tế từ bảng hóa đơn
+     */
+    public long getTotalSpentByCustomer(Long customerId) {
+        Optional<Customer> customerOpt = getCustomerById(customerId);
+        if (customerOpt.isPresent() && customerOpt.get().getTotalSpent() != null) {
+            return customerOpt.get().getTotalSpent().longValue();
+        }
+        // TODO: Triển khai logic thực tế, ví dụ truy vấn tổng tiền từ bảng hóa đơn
+        // return orderRepository.sumTotalByCustomerId(customerId);
+        return 0L; // Trả về 0 nếu chưa có logic
+    }
+
+    public boolean isFirstOrderOver2M(Long customerId) {
+        try {
+            // Lấy danh sách đơn hàng của khách hàng, sắp xếp theo ngày tạo
+            List<Order> orders = orderRepository.findByCustomerIdOrderByOrderDateAsc(customerId);
+            if (orders != null && !orders.isEmpty()) {
+                Order firstOrder = orders.get(0);
+                return firstOrder.getFinalAmount() != null && firstOrder.getFinalAmount() >= 2_000_000;
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi kiểm tra hóa đơn đầu tiên: " + e.getMessage());
+        }
+        return false;
+    }
+@Autowired
+    private OrderRepository orderRepository; // Thêm dependency này
 
     // ==================== SEARCH METHODS ====================
     
-
     public List<Customer> findByName(String name) {
         return customerRepository.findByNameContainingIgnoreCase(name);
     }
@@ -260,15 +340,23 @@ public class CustomerService {
     // ==================== VIP MANAGEMENT ====================
     
     public boolean confirmVipCustomer(Long id, String adminUsername) {
-        Optional<Customer> customerOpt = getCustomerById(id);
-        if (customerOpt.isPresent()) {
-            Customer customer = customerOpt.get();
-            if (customer.getTotalSpent() != null && customer.getTotalSpent() >= 2000000) {
-                customer.setIsVip(true);
-                customer.setVipDiscountPercent(7.0);
-                updateCustomer(id, customer);
-                return true;
+        try {
+            long totalSpent = getTotalSpentByCustomer(id);
+            boolean firstOrderOver2M = isFirstOrderOver2M(id);
+
+            // Điều kiện VIP: Hóa đơn đầu tiên trên 2 triệu HOẶC tích lũy đủ 10 triệu
+            if (firstOrderOver2M || totalSpent >= 10_000_000) {
+                Optional<Customer> customerOpt = getCustomerById(id);
+                if (customerOpt.isPresent()) {
+                    Customer customer = customerOpt.get();
+                    customer.setIsVip(true);
+                    customer.setVipDiscountPercent(5.0); // Giảm 5% cho khách VIP
+                    updateCustomer(id, customer);
+                    return true;
+                }
             }
+        } catch (Exception e) {
+            System.err.println("Lỗi xác nhận VIP: " + e.getMessage());
         }
         return false;
     }

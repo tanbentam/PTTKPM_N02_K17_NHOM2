@@ -11,23 +11,26 @@ public class Customer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "full_name", nullable = false)  // Map với cột 'full_name' trong database
-    private String name;  // Java field vẫn là 'name' nhưng map với DB column 'full_name'
+    @Column(name = "full_name", nullable = false)
+    private String name;
 
-    @Column(unique = true)  // Bỏ nullable = false, chỉ giữ unique
+    @Column(unique = true)
     private String phone;
 
-    // THÊM: Thông tin địa chỉ
-    private String province; // Tỉnh/Thành phố
-    private String district; // Quận/Huyện  
-    private String ward;     // Phường/Xã
-    private String address;  // Số nhà, tên đường
+    // Địa chỉ chi tiết
+    private String address;    // Số nhà, tên đường
+    private String ward;       // Phường/Xã
+    private String district;   // Quận/Huyện
+    private String province;   // Tỉnh/Thành phố
 
-    // THÊM: Ngày sinh
-    @Column(name = "date_of_birth")
+    // Ngày sinh - THÊM NULLABLE = TRUE EXPLICITLY
+    @Column(name = "date_of_birth", nullable = true)
     private LocalDate dateOfBirth;
 
-    // THÊM: Thông tin mua hàng cho VIP
+    // Email (nếu cần)
+    private String email;
+
+    // Thông tin mua hàng cho VIP
     @Column(name = "total_spent", columnDefinition = "DECIMAL(10,2) DEFAULT 0")
     private Double totalSpent = 0.0;
 
@@ -40,8 +43,7 @@ public class Customer {
     @Column(name = "vip_discount_percent", columnDefinition = "DECIMAL(5,2) DEFAULT 0")
     private Double vipDiscountPercent = 0.0;
 
-    // THÊM: Trường cho POS Service
-    @Column(name = "pending_vip", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(name = "pending_vip", columnDefinition = "BOOLEAN DEFAULT FALSE")  
     private Boolean pendingVip = false;
 
     @Column(name = "last_order_date")
@@ -59,15 +61,16 @@ public class Customer {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public Customer(String name, String phone, String province, String district, String ward, String address, LocalDate dateOfBirth) {
+    public Customer(String name, String phone, String address, String ward, String district, String province, LocalDate dateOfBirth, String email) {
         this();
         this.name = name;
         this.phone = phone;
-        this.province = province;
-        this.district = district;
-        this.ward = ward;
         this.address = address;
+        this.ward = ward;
+        this.district = district;
+        this.province = province;
         this.dateOfBirth = dateOfBirth;
+        this.email = email;
     }
 
     // Getters and Setters
@@ -80,20 +83,31 @@ public class Customer {
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
 
-    public String getProvince() { return province; }
-    public void setProvince(String province) { this.province = province; }
-
-    public String getDistrict() { return district; }
-    public void setDistrict(String district) { this.district = district; }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 
     public String getWard() { return ward; }
     public void setWard(String ward) { this.ward = ward; }
 
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
+    public String getDistrict() { return district; }
+    public void setDistrict(String district) { this.district = district; }
+
+    public String getProvince() { return province; }
+    public void setProvince(String province) { this.province = province; }
 
     public LocalDate getDateOfBirth() { return dateOfBirth; }
-    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    
+    // ENHANCED SETTER VỚI LOGGING
+    public void setDateOfBirth(LocalDate dateOfBirth) { 
+        System.out.println("=== Customer.setDateOfBirth() ===");
+        System.out.println("Setting dateOfBirth from: " + this.dateOfBirth + " to: " + dateOfBirth);
+        this.dateOfBirth = dateOfBirth; 
+        System.out.println("dateOfBirth after set: " + this.dateOfBirth);
+        System.out.println("=== End setDateOfBirth() ===");
+    }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
     public Double getTotalSpent() { return totalSpent; }
     public void setTotalSpent(Double totalSpent) { this.totalSpent = totalSpent; }
@@ -127,22 +141,19 @@ public class Customer {
         this.orderCount = (this.orderCount != null ? this.orderCount : 0) + 1;
         this.lastOrderDate = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-
-        // Tự động cập nhật trạng thái VIP
         updateVipStatus();
     }
-
+    
     // Cập nhật trạng thái VIP dựa trên tổng chi tiêu
     public void updateVipStatus() {
         double total = this.totalSpent != null ? this.totalSpent : 0.0;
-
-        if (total >= 5000000) { // VIP Diamond: >= 5 triệu
+        if (total >= 5000000) {
             this.isVip = true;
             this.vipDiscountPercent = 10.0;
-        } else if (total >= 2000000) { // VIP Gold: >= 2 triệu
+        } else if (total >= 2000000) {
             this.isVip = true;
             this.vipDiscountPercent = 7.0;
-        } else if (total >= 1000000) { // VIP Silver: >= 1 triệu
+        } else if (total >= 1000000) {
             this.isVip = true;
             this.vipDiscountPercent = 5.0;
         } else {
@@ -151,17 +162,14 @@ public class Customer {
         }
     }
 
-    // Kiểm tra có thể nhận giảm giá VIP không
     public boolean canGetVipDiscount() {
         return this.isVip != null && this.isVip && this.vipDiscountPercent != null && this.vipDiscountPercent > 0;
     }
 
-    // Lấy cấp độ VIP
     public String getVipLevel() {
         if (!canGetVipDiscount()) {
             return "Regular";
         }
-
         double discount = this.vipDiscountPercent != null ? this.vipDiscountPercent : 0.0;
         if (discount >= 10.0) {
             return "Diamond";
@@ -194,35 +202,42 @@ public class Customer {
         return fullAddress.toString();
     }
 
-    // Getter cho VIP đúng chuẩn Java Bean (để dùng với isVip() trong Service)
+    // Getter cho VIP đúng chuẩn Java Bean
     public boolean isVip() {
         return isVip != null && isVip;
     }
-
     public void setVip(Boolean vip) {
         this.isVip = vip;
     }
 
-    // Getter cho pendingVip đúng chuẩn Java Bean
     public boolean isPendingVip() {
         return pendingVip != null && pendingVip;
     }
 
     @PrePersist
     protected void onCreate() {
+        System.out.println("=== @PrePersist onCreate() ===");
+        System.out.println("dateOfBirth before onCreate: " + this.dateOfBirth);
+        
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        // Đảm bảo các trường số có giá trị mặc định
         if (totalSpent == null) totalSpent = 0.0;
         if (orderCount == null) orderCount = 0;
         if (isVip == null) isVip = false;
         if (vipDiscountPercent == null) vipDiscountPercent = 0.0;
         if (pendingVip == null) pendingVip = false;
+        
+        // KHÔNG SET dateOfBirth = null nếu nó đã có giá trị
+        System.out.println("dateOfBirth after onCreate: " + this.dateOfBirth);
+        System.out.println("=== End onCreate() ===");
     }
 
     @PreUpdate
     protected void onUpdate() {
+        System.out.println("=== @PreUpdate onUpdate() ===");
+        System.out.println("dateOfBirth in onUpdate: " + this.dateOfBirth);
         updatedAt = LocalDateTime.now();
+        System.out.println("=== End onUpdate() ===");
     }
 
     @Override
@@ -233,6 +248,7 @@ public class Customer {
                 ", phone='" + phone + '\'' +
                 ", fullAddress='" + getFullAddress() + '\'' +
                 ", dateOfBirth=" + dateOfBirth +
+                ", email=" + email +
                 ", totalSpent=" + totalSpent +
                 ", orderCount=" + orderCount +
                 ", vipLevel='" + getVipLevel() + '\'' +

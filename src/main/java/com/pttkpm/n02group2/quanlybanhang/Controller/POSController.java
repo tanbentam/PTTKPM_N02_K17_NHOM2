@@ -4,11 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pttkpm.n02group2.quanlybanhang.Model.*;
 import com.pttkpm.n02group2.quanlybanhang.Service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,10 +29,10 @@ public class POSController {
 
     @Autowired
     private ProductService productService;
-    
+
     @Autowired
     private CustomerService customerService;
-    
+
     @Autowired
     private POSService posService;
 
@@ -72,66 +79,67 @@ public class POSController {
         return "user/pos/interface";
     }
 
-    // ==================== PRODUCT SEARCH (Tìm kiếm theo tên, mô tả, danh mục) ====================
+    // ==================== PRODUCT SEARCH ====================
 
     @GetMapping("/search")
-@ResponseBody
-public List<Product> searchProducts(@RequestParam String query) {
-    String lowerQuery = query.toLowerCase();
-    return productService.getAllProducts().stream()
-        .filter(p -> p.getQuantity() > 0 &&
-            (
-                (p.getName() != null && p.getName().toLowerCase().contains(lowerQuery)) ||
-                (p.getDescription() != null && p.getDescription().toLowerCase().contains(lowerQuery)) ||
-                (p.getCategory() != null && p.getCategory().toLowerCase().contains(lowerQuery))
+    @ResponseBody
+    public List<Product> searchProducts(@RequestParam String query) {
+        String lowerQuery = query.toLowerCase();
+        return productService.getAllProducts().stream()
+            .filter(p -> p.getQuantity() > 0 &&
+                (
+                    (p.getName() != null && p.getName().toLowerCase().contains(lowerQuery)) ||
+                    (p.getDescription() != null && p.getDescription().toLowerCase().contains(lowerQuery)) ||
+                    (p.getCategory() != null && p.getCategory().toLowerCase().contains(lowerQuery))
+                )
             )
-        )
-        .limit(10)
-        .toList();
-}
+            .limit(10)
+            .toList();
+    }
 
-@GetMapping("/products")
-@ResponseBody
-public List<Product> getProducts() {
-    return productService.getAllProducts().stream()
-        .filter(p -> p.getQuantity() > 0)
-        .toList();
-}
+    @GetMapping("/products")
+    @ResponseBody
+    public List<Product> getProducts() {
+        return productService.getAllProducts().stream()
+            .filter(p -> p.getQuantity() > 0)
+            .toList();
+    }
 
-@GetMapping("/categories")
-@ResponseBody
-public List<String> getCategories() {
-    return productService.getAllProducts().stream()
-        .map(Product::getCategory)
-        .filter(c -> c != null && !c.trim().isEmpty())
-        .distinct()
-        .toList();
-}
+    @GetMapping("/categories")
+    @ResponseBody
+    public List<String> getCategories() {
+        return productService.getAllProducts().stream()
+            .map(Product::getCategory)
+            .filter(c -> c != null && !c.trim().isEmpty())
+            .distinct()
+            .toList();
+    }
 
-@GetMapping("/search-by-category")
-@ResponseBody
-public List<Product> searchProductsByCategory(@RequestParam String category) {
-    String lowerCategory = category.toLowerCase();
-    return productService.getAllProducts().stream()
-        .filter(p -> p.getQuantity() > 0 &&
-            p.getCategory() != null &&
-            p.getCategory().toLowerCase().equals(lowerCategory)
-        )
-        .toList();
-}
+    @GetMapping("/search-by-category")
+    @ResponseBody
+    public List<Product> searchProductsByCategory(@RequestParam String category) {
+        String lowerCategory = category.toLowerCase();
+        return productService.getAllProducts().stream()
+            .filter(p -> p.getQuantity() > 0 &&
+                p.getCategory() != null &&
+                p.getCategory().toLowerCase().equals(lowerCategory)
+            )
+            .toList();
+    }
+
     // ==================== CART MANAGEMENT ====================
 
     @PostMapping("/cart/add")
     @ResponseBody
-    public CartResponse addToCart(@RequestParam Long productId, 
-                                @RequestParam Integer quantity,
-                                HttpSession session) {
+    public CartResponse addToCart(@RequestParam Long productId,
+                                  @RequestParam Integer quantity,
+                                  HttpSession session) {
         try {
             Optional<Product> productOpt = productService.getProductById(productId);
             if (!productOpt.isPresent()) {
                 return new CartResponse(false, "Sản phẩm không tồn tại");
             }
-            
+
             Product product = productOpt.get();
             if (product.getQuantity() < quantity) {
                 return new CartResponse(false, "Không đủ hàng trong kho");
@@ -163,7 +171,7 @@ public List<Product> searchProductsByCategory(@RequestParam String category) {
             }
 
             session.setAttribute("cartItems", cartItems);
-            
+
             double cartTotal = cartItems.stream()
                 .mapToDouble(item -> item.getQuantity() * item.getPrice())
                 .sum();
@@ -177,9 +185,9 @@ public List<Product> searchProductsByCategory(@RequestParam String category) {
 
     @PostMapping("/cart/update")
     @ResponseBody
-    public CartResponse updateCartItem(@RequestParam Long productId, 
-                                     @RequestParam Integer quantity,
-                                     HttpSession session) {
+    public CartResponse updateCartItem(@RequestParam Long productId,
+                                       @RequestParam Integer quantity,
+                                       HttpSession session) {
         try {
             List<CartItem> cartItems = (List<CartItem>) session.getAttribute("cartItems");
             if (cartItems == null) {
@@ -195,7 +203,7 @@ public List<Product> searchProductsByCategory(@RequestParam String category) {
             }
 
             CartItem item = itemOpt.get();
-            
+
             Optional<Product> productOpt = productService.getProductById(productId);
             if (productOpt.isPresent() && productOpt.get().getQuantity() < quantity) {
                 return new CartResponse(false, "Không đủ hàng trong kho");
@@ -208,7 +216,7 @@ public List<Product> searchProductsByCategory(@RequestParam String category) {
             }
 
             session.setAttribute("cartItems", cartItems);
-            
+
             double cartTotal = cartItems.stream()
                 .mapToDouble(i -> i.getQuantity() * i.getPrice())
                 .sum();
@@ -228,7 +236,7 @@ public List<Product> searchProductsByCategory(@RequestParam String category) {
             if (cartItems != null) {
                 cartItems.removeIf(item -> item.getProductId().equals(productId));
                 session.setAttribute("cartItems", cartItems);
-                
+
                 double cartTotal = cartItems.stream()
                     .mapToDouble(item -> item.getQuantity() * item.getPrice())
                     .sum();
@@ -250,63 +258,200 @@ public List<Product> searchProductsByCategory(@RequestParam String category) {
 
     // ==================== CUSTOMER MANAGEMENT ====================
 
-    // ...existing code...
-
-// ==================== CUSTOMER MANAGEMENT ====================
-
-@GetMapping("/customer/all")
-@ResponseBody
-public List<Customer> getAllCustomers() {
-    try {
-        return customerService.getAllCustomers();
-    } catch (Exception e) {
-        // Trả về danh sách rỗng nếu có lỗi để tránh crash
-        return new ArrayList<>();
-    }
-}
-
-@GetMapping("/customer/search")
-@ResponseBody
-public List<Customer> searchCustomers(@RequestParam String query) {
-    try {
-        if (query == null || query.length() < 3) {
+    @GetMapping("/customer/all")
+    @ResponseBody
+    public List<Customer> getAllCustomers() {
+        try {
+            return customerService.getAllCustomers();
+        } catch (Exception e) {
             return new ArrayList<>();
         }
-        String lowerQuery = query.toLowerCase();
-        return customerService.getAllCustomers().stream()
-            .filter(c -> (c.getName() != null && c.getName().toLowerCase().contains(lowerQuery)) ||
-                        (c.getPhone() != null && c.getPhone().contains(query)))
-            .limit(10)
-            .toList();
-    } catch (Exception e) {
-        // Trả về danh sách rỗng nếu có lỗi
-        return new ArrayList<>();
     }
-}
 
-// ...existing code...
-    @PostMapping("/customer/create")
+    @GetMapping("/customer/search")
     @ResponseBody
-    public CustomerResponse createCustomer(@RequestParam String fullName,
-                                         @RequestParam String phoneNumber,
-                                         @RequestParam(required = false) String email) {
+    public List<Customer> searchCustomers(@RequestParam String query) {
         try {
-            if (customerService.existsByPhone(phoneNumber)) {
-                return new CustomerResponse(false, "Số điện thoại đã tồn tại", null);
+            if (query == null || query.length() < 3) {
+                return new ArrayList<>();
             }
-
-            Customer customer = new Customer();
-            customer.setName(fullName);
-            customer.setPhone(phoneNumber);
-            
-            Customer savedCustomer = customerService.createCustomer(customer);
-            return new CustomerResponse(true, "Đã tạo khách hàng thành công", savedCustomer);
-
+            String lowerQuery = query.toLowerCase();
+            return customerService.getAllCustomers().stream()
+                .filter(c -> (c.getName() != null && c.getName().toLowerCase().contains(lowerQuery)) ||
+                            (c.getPhone() != null && c.getPhone().contains(query)))
+                .limit(10)
+                .toList();
         } catch (Exception e) {
-            return new CustomerResponse(false, "Có lỗi xảy ra: " + e.getMessage(), null);
+            return new ArrayList<>();
         }
     }
 
+    @PostMapping("/customer/create")
+@ResponseBody
+public CustomerResponse createCustomer(
+    @RequestParam String fullName,
+    @RequestParam String phoneNumber,
+    @RequestParam(required = false) String email,
+    @RequestParam(required = false) String address,
+    @RequestParam(required = false) String ward,
+    @RequestParam(required = false) String district,
+    @RequestParam(required = false) String province,
+    @RequestParam(required = false, name = "dob") String dateOfBirth,  // ⬅️ THÊM name = "dob"
+    HttpServletRequest request
+) {
+    try {
+        System.out.println("=== CREATE CUSTOMER DEBUG ===");
+        System.out.println("Full Name: " + fullName);
+        System.out.println("Phone Number: " + phoneNumber);
+        System.out.println("Email: " + email);
+        System.out.println("Address: " + address);
+        System.out.println("Ward: " + ward);
+        System.out.println("District: " + district);
+        System.out.println("Province: " + province);
+        System.out.println("Date of Birth (RAW): '" + dateOfBirth + "'");
+        System.out.println("Date of Birth is null? " + (dateOfBirth == null));
+        System.out.println("Date of Birth is empty? " + (dateOfBirth != null && dateOfBirth.isEmpty()));
+        
+        // DEBUG: IN TẤT CẢ PARAMETERS
+        System.out.println("=== ALL REQUEST PARAMETERS ===");
+        request.getParameterMap().forEach((key, values) -> {
+            System.out.println(key + " = " + java.util.Arrays.toString(values));
+        });
+        System.out.println("=== END PARAMETERS ===");
+        
+        // Validate required fields
+        if (fullName == null || fullName.trim().isEmpty()) {
+            return new CustomerResponse(false, "Tên khách hàng không được để trống", null);
+        }
+        
+        if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+            return new CustomerResponse(false, "Số điện thoại không được để trống", null);
+        }
+        
+        if (customerService.existsByPhone(phoneNumber)) {
+            return new CustomerResponse(false, "Số điện thoại đã tồn tại", null);
+        }
+        
+        // Tạo customer object
+        Customer customer = new Customer();
+        customer.setName(fullName.trim());
+        customer.setPhone(phoneNumber.trim());
+        customer.setEmail(email != null && !email.trim().isEmpty() ? email.trim() : null);
+        customer.setAddress(address != null && !address.trim().isEmpty() ? address.trim() : null);
+        customer.setWard(ward != null && !ward.trim().isEmpty() ? ward.trim() : null);
+        customer.setDistrict(district != null && !district.trim().isEmpty() ? district.trim() : null);
+        customer.setProvince(province != null && !province.trim().isEmpty() ? province.trim() : null);
+        
+        // XỬ LÝ NGÀY SINH CHI TIẾT
+        System.out.println("=== PROCESSING DATE OF BIRTH ===");
+        System.out.println("dateOfBirth parameter value: '" + dateOfBirth + "'");
+        
+        if (dateOfBirth != null && !dateOfBirth.trim().isEmpty()) {
+            String trimmedDob = dateOfBirth.trim();
+            System.out.println("✅ Found valid dateOfBirth: '" + trimmedDob + "'");
+            System.out.println("Length: " + trimmedDob.length());
+            
+            try {
+                LocalDate dobParsed = parseDateOfBirth(trimmedDob);
+                if (dobParsed != null) {
+                    customer.setDateOfBirth(dobParsed);
+                    System.out.println("✅ Successfully set dateOfBirth: " + dobParsed);
+                } else {
+                    System.out.println("⚠️ Parse returned null, setting customer DOB to null");
+                    customer.setDateOfBirth(null);
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Exception parsing dateOfBirth: " + e.getMessage());
+                e.printStackTrace();
+                customer.setDateOfBirth(null);
+            }
+        } else {
+            System.out.println("⚠️ dateOfBirth is null or empty, setting to null");
+            customer.setDateOfBirth(null);
+        }
+        
+        System.out.println("=== CUSTOMER OBJECT BEFORE SAVE ===");
+        System.out.println("Name: " + customer.getName());
+        System.out.println("Phone: " + customer.getPhone());
+        System.out.println("Email: " + customer.getEmail());
+        System.out.println("Address: " + customer.getAddress());
+        System.out.println("Ward: " + customer.getWard());
+        System.out.println("District: " + customer.getDistrict());
+        System.out.println("Province: " + customer.getProvince());
+        System.out.println("Date of Birth: " + customer.getDateOfBirth());
+        System.out.println("=== END CUSTOMER OBJECT ===");
+
+        Customer savedCustomer = customerService.createCustomer(customer);
+        
+        System.out.println("=== FINAL SAVED CUSTOMER ===");
+        System.out.println("ID: " + savedCustomer.getId());
+        System.out.println("Name: " + savedCustomer.getName());
+        System.out.println("Phone: " + savedCustomer.getPhone());
+        System.out.println("Date of Birth: " + savedCustomer.getDateOfBirth());
+        System.out.println("=== END CREATE CUSTOMER DEBUG ===");
+        
+        return new CustomerResponse(true, "Đã tạo khách hàng thành công", savedCustomer);
+
+    } catch (Exception e) {
+        System.err.println("❌ Lỗi tạo khách hàng: " + e.getMessage());
+        e.printStackTrace();
+        return new CustomerResponse(false, "Có lỗi xảy ra: " + e.getMessage(), null);
+    }
+}
+
+// THÊM METHOD PARSE AN TOÀN HỚN
+private LocalDate parseDateOfBirthSafely(String dobStr) {
+    System.out.println("=== PARSE DATE OF BIRTH SAFELY ===");
+    System.out.println("Input: '" + dobStr + "'");
+    
+    if (dobStr == null || dobStr.trim().isEmpty()) {
+        System.out.println("❌ Input is null or empty");
+        return null;
+    }
+    
+    dobStr = dobStr.trim();
+    System.out.println("Trimmed input: '" + dobStr + "'");
+    
+    // DANH SÁCH CÁC FORMAT ĐƯỢC HỖ TRỢ
+    String[][] patterns = {
+        {"dd/MM/yyyy", "\\d{2}/\\d{2}/\\d{4}"},    // 25/12/1990
+        {"dd-MM-yyyy", "\\d{2}-\\d{2}-\\d{4}"},    // 25-12-1990
+        {"yyyy-MM-dd", "\\d{4}-\\d{2}-\\d{2}"},    // 1990-12-25
+        {"MM/dd/yyyy", "\\d{2}/\\d{2}/\\d{4}"},    // 12/25/1990 (US format)
+        {"dd/MM/yy", "\\d{2}/\\d{2}/\\d{2}"},      // 25/12/90
+        {"dd-MM-yy", "\\d{2}-\\d{2}-\\d{2}"}       // 25-12-90
+    };
+    
+    for (String[] patternPair : patterns) {
+        String pattern = patternPair[0];
+        String regex = patternPair[1];
+        
+        try {
+            if (dobStr.matches(regex)) {
+                System.out.println("✅ Matches pattern: " + pattern);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+                LocalDate parsed = LocalDate.parse(dobStr, formatter);
+                
+                // KIỂM TRA NĂM HỢP LÝ (1900-2030)
+                int year = parsed.getYear();
+                if (year < 1900 || year > 2030) {
+                    System.out.println("⚠️ Invalid year: " + year + " for pattern " + pattern);
+                    continue;
+                }
+                
+                System.out.println("✅ Successfully parsed: " + dobStr + " -> " + parsed);
+                return parsed;
+            }
+        } catch (DateTimeParseException e) {
+            System.out.println("❌ Failed with pattern " + pattern + ": " + e.getMessage());
+        }
+    }
+    
+    // NẾU TẤT CẢ PATTERN ĐỀU THẤT BẠI
+    System.err.println("❌ Could not parse date: '" + dobStr + "'");
+    System.err.println("❌ Supported formats: dd/MM/yyyy, dd-MM-yyyy, yyyy-MM-dd, MM/dd/yyyy, dd/MM/yy, dd-MM-yy");
+    return null;
+}
     // ==================== PAYMENT PAGE ====================
 
     @GetMapping("/payment")
@@ -319,30 +464,38 @@ public List<Customer> searchCustomers(@RequestParam String query) {
         try {
             List<CartItem> cartItems = (List<CartItem>) session.getAttribute("cartItems");
             if (cartItems == null || cartItems.isEmpty()) {
-                model.addAttribute("error", "Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi thanh toán.");
-                return "redirect:/user/pos";
+                Long orderId = (Long) session.getAttribute("orderId");
+                if (orderId != null) {
+                    Map<String, Object> orderResult = posService.getOrderById(orderId);
+                    if ((Boolean) orderResult.get("success")) {
+                        Order order = (Order) orderResult.get("order");
+                        model.addAttribute("order", order);
+                        model.addAttribute("showReceipt", true);
+                        model.addAttribute("cartItems", new ArrayList<>());
+                    }
+                } else {
+                    model.addAttribute("error", "Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi thanh toán.");
+                    return "redirect:/user/pos";
+                }
+            } else {
+                Customer selectedCustomer = (Customer) session.getAttribute("selectedCustomer");
+                double subtotal = cartItems.stream()
+                    .mapToDouble(item -> item.getQuantity() * item.getPrice())
+                    .sum();
+                double vipDiscount = 0.0;
+                double finalAmount = subtotal;
+                if (selectedCustomer != null && selectedCustomer.isVip()) {
+                    vipDiscount = subtotal * (selectedCustomer.getVipDiscountPercent() / 100.0);
+                    finalAmount = subtotal - vipDiscount;
+                }
+                model.addAttribute("cartItems", cartItems);
+                model.addAttribute("selectedCustomer", selectedCustomer);
+                model.addAttribute("subtotal", subtotal);
+                model.addAttribute("vipDiscount", vipDiscount);
+                model.addAttribute("finalAmount", finalAmount);
             }
 
-            Customer selectedCustomer = (Customer) session.getAttribute("selectedCustomer");
-
-            double subtotal = cartItems.stream()
-                .mapToDouble(item -> item.getQuantity() * item.getPrice())
-                .sum();
-            double vipDiscount = 0.0;
-            double finalAmount = subtotal;
-
-            if (selectedCustomer != null && selectedCustomer.isVip()) {
-                vipDiscount = subtotal * (selectedCustomer.getVipDiscountPercent() / 100.0);
-                finalAmount = subtotal - vipDiscount;
-            }
-
-            model.addAttribute("cartItems", cartItems);
-            model.addAttribute("selectedCustomer", selectedCustomer);
-            model.addAttribute("subtotal", subtotal);
-            model.addAttribute("vipDiscount", vipDiscount);
-            model.addAttribute("finalAmount", finalAmount);
             model.addAttribute("staffName", username);
-
             return "user/pos/payment";
 
         } catch (Exception e) {
@@ -351,26 +504,12 @@ public List<Customer> searchCustomers(@RequestParam String query) {
         }
     }
 
-    
-    // ==================== PROCESS PAYMENT ====================
-
-@GetMapping("/get-current-order-id")
-@ResponseBody
-public Map<String, Object> getCurrentOrderId(HttpSession session) {
-    Object orderId = session.getAttribute("orderId");
-    if (orderId != null) {
-        return Map.of("orderId", orderId);
-    } else {
-        return Map.of("orderId", null);
-    }
-}
     @PostMapping("/process-payment")
-public String processPayment(@RequestParam String paymentMethod,
-                           @RequestParam(required = false) String notes,
-                           @RequestParam(defaultValue = "false") boolean createVipRequest,
-                           HttpSession session,
-                           RedirectAttributes redirectAttributes) {
-    try {
+    public String processPayment(@RequestParam String paymentMethod,
+                                 @RequestParam(required = false) String notes,
+                                 @RequestParam(defaultValue = "false") boolean createVipRequest,
+                                 HttpSession session,
+                                 RedirectAttributes redirectAttributes) {
         String username = (String) session.getAttribute("username");
         if (username == null) {
             redirectAttributes.addFlashAttribute("error", "Phiên đăng nhập hết hạn");
@@ -384,13 +523,6 @@ public String processPayment(@RequestParam String paymentMethod,
         }
 
         Customer selectedCustomer = (Customer) session.getAttribute("selectedCustomer");
-
-        // Loại bỏ kiểm tra bắt buộc selectedCustomer != null để hỗ trợ khách lẻ
-        // if (selectedCustomer == null) {
-        //     redirectAttributes.addFlashAttribute("error", "Vui lòng chọn khách hàng trước khi thanh toán");
-        //     return "redirect:/user/pos/payment";
-        // }
-
         if (selectedCustomer != null && selectedCustomer.isVip()) {
             if (selectedCustomer.getAddress() == null || selectedCustomer.getAddress().isEmpty()) {
                 redirectAttributes.addFlashAttribute("error", "Khách VIP phải nhập đầy đủ địa chỉ");
@@ -398,67 +530,63 @@ public String processPayment(@RequestParam String paymentMethod,
             }
         }
 
-        OrderRequest orderRequest = new OrderRequest();
-        orderRequest.setCustomer(selectedCustomer != null ? convertCustomerToCustomerInfo(selectedCustomer) : null); // null cho khách lẻ
-        orderRequest.setItems(convertCartItemsToOrderItems(cartItems));
-        orderRequest.setCreateVipRequest(createVipRequest);
-
-        double subtotal = cartItems.stream()
-            .mapToDouble(item -> item.getQuantity() * item.getPrice())
-            .sum();
-        double vipDiscountAmount = (selectedCustomer != null && selectedCustomer.isVip()) ? subtotal * (selectedCustomer.getVipDiscountPercent() / 100.0) : 0.0;
-        double finalAmount = subtotal - vipDiscountAmount;
-
-        orderRequest.setTotalAmount(subtotal);
-        orderRequest.setVipDiscountAmount(vipDiscountAmount);
-        orderRequest.setFinalAmount(finalAmount);
-        orderRequest.setVipOrder(selectedCustomer != null && selectedCustomer.isVip());
-
-        Map<String, Object> result;
         try {
-            result = posService.processOrder(orderRequest);
-        } catch (Exception ex) {
-            redirectAttributes.addFlashAttribute("error", "Không tải được dữ liệu từ database: " + ex.getMessage());
+            OrderRequest orderRequest = new OrderRequest();
+            orderRequest.setCustomer(selectedCustomer != null ? convertCustomerToCustomerInfo(selectedCustomer) : null);
+            orderRequest.setItems(convertCartItemsToOrderItems(cartItems));
+            orderRequest.setCreateVipRequest(createVipRequest);
+
+            double subtotal = cartItems.stream()
+                .mapToDouble(item -> item.getQuantity() * item.getPrice())
+                .sum();
+            double vipDiscountAmount = (selectedCustomer != null && selectedCustomer.isVip())
+                ? subtotal * (selectedCustomer.getVipDiscountPercent() / 100.0) : 0.0;
+            double finalAmount = subtotal - vipDiscountAmount;
+
+            orderRequest.setTotalAmount(subtotal);
+            orderRequest.setVipDiscountAmount(vipDiscountAmount);
+            orderRequest.setFinalAmount(finalAmount);
+            orderRequest.setVipOrder(selectedCustomer != null && selectedCustomer.isVip());
+            orderRequest.setPaymentMethod(paymentMethod);
+
+            Map<String, Object> result = posService.processOrderAndUpdateCustomerAndInventory(orderRequest, cartItems, username);
+
+            if (Boolean.TRUE.equals(result.get("success"))) {
+                Long orderId = (Long) result.get("orderId");
+                String orderNumber = (String) result.get("orderNumber");
+                session.setAttribute("orderNumber", orderNumber);
+                session.setAttribute("orderId", orderId);
+
+                session.removeAttribute("cartItems");
+
+                Boolean vipRequestCreated = (Boolean) result.get("vipRequestCreated");
+                StringBuilder successMsg = new StringBuilder();
+                successMsg.append("<b>Đơn hàng ").append(orderNumber)
+                    .append(" (ID: ").append(orderId).append(")</b> đã được tạo thành công!<br>");
+                successMsg.append("Tổng tiền: <b>").append(finalAmount).append(" VND</b><br>");
+                successMsg.append("Thời gian: ").append(java.time.LocalDateTime.now()).append("<br>");
+                if (vipRequestCreated != null && vipRequestCreated) {
+                    successMsg.append("<span style='color:green'>Yêu cầu VIP đã được tạo và đang chờ admin xác nhận!</span><br>");
+                }
+                successMsg.append("Bạn có thể <b>in hóa đơn</b> hoặc bắt đầu giao dịch mới.");
+
+                redirectAttributes.addFlashAttribute("success", successMsg.toString());
+                redirectAttributes.addFlashAttribute("orderId", orderId);
+                redirectAttributes.addFlashAttribute("orderNumber", orderNumber);
+                redirectAttributes.addFlashAttribute("finalAmount", finalAmount);
+
+                return "redirect:/user/pos/payment";
+            } else {
+                redirectAttributes.addFlashAttribute("error", "Lỗi khi tạo đơn hàng: " + result.get("message"));
+                return "redirect:/user/pos/payment";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error",
+                "Có lỗi xảy ra khi xử lý thanh toán: " + e.getMessage());
             return "redirect:/user/pos/payment";
         }
-
-        if ((Boolean) result.get("success")) {
-            // Cập nhật tồn kho
-            try {
-                posService.updateInventory(cartItems);
-            } catch (Exception ex) {
-                System.out.println("Lỗi cập nhật tồn kho: " + ex.getMessage());
-            }
-
-            // Lưu orderNumber vào session để hiển thị trong modal
-            Long orderId = (Long) result.get("orderId");
-            String orderNumber = (String) result.get("orderNumber");
-            session.setAttribute("orderNumber", orderNumber);
-            session.setAttribute("orderId", orderId);
-
-            Boolean vipRequestCreated = (Boolean) result.get("vipRequestCreated");
-            redirectAttributes.addFlashAttribute("success", 
-                "Đơn hàng " + orderNumber + " đã được tạo thành công!");
-            
-            if (vipRequestCreated) {
-                redirectAttributes.addFlashAttribute("vipMessage", 
-                    "Yêu cầu VIP đã được tạo và đang chờ admin xác nhận!");
-            }
-
-            return "redirect:/user/pos/payment";  // Redirect về payment để hiển thị modal
-        } else {
-            redirectAttributes.addFlashAttribute("error", result.get("message"));
-            return "redirect:/user/pos/payment";
-        }
-
-    } catch (Exception e) {
-        redirectAttributes.addFlashAttribute("error", 
-            "Có lỗi xảy ra khi xử lý thanh toán: " + e.getMessage());
-        return "redirect:/user/pos/payment";
     }
-}
-
-    // ==================== POST PAYMENT (From Interface) ====================
 
     @PostMapping("/payment")
     public String showPaymentPagePost(
@@ -468,18 +596,14 @@ public String processPayment(@RequestParam String paymentMethod,
         @RequestParam("cartData") String cartDataJson,
         @RequestParam("customerData") String customerDataJson,
         Model model, HttpSession session) {
-        
+
         try {
-            // Khởi tạo ObjectMapper để parse JSON
             ObjectMapper objectMapper = new ObjectMapper();
-            
-            // Parse cart data từ JSON
+
             List<Map<String, Object>> cart = objectMapper.readValue(cartDataJson, List.class);
-            
-            // Parse customer data từ JSON
             Map<String, Object> customer = objectMapper.readValue(customerDataJson, Map.class);
-            
-            // Convert cart (Map) thành List<CartItem>
+
+            // Xử lý cart items
             List<CartItem> cartItems = new ArrayList<>();
             for (Map<String, Object> item : cart) {
                 CartItem ci = new CartItem();
@@ -489,60 +613,247 @@ public String processPayment(@RequestParam String paymentMethod,
                 ci.setQuantity(Integer.valueOf(item.get("quantity").toString()));
                 cartItems.add(ci);
             }
-            
-            // Convert customer (Map) thành Customer object
+
+            // XỬ LÝ THÔNG TIN KHÁCH HÀNG
             Customer selectedCustomer = new Customer();
-            selectedCustomer.setId(customer.get("id") != null ? Long.valueOf(customer.get("id").toString()) : null);
-            selectedCustomer.setName((String) customer.get("name"));
-            selectedCustomer.setPhone((String) customer.get("phone"));
-            selectedCustomer.setVip(Boolean.parseBoolean(customer.getOrDefault("vip", false).toString()));
-            selectedCustomer.setVipDiscountPercent(Double.valueOf(customer.getOrDefault("vipDiscountPercent", 0).toString()));
-            selectedCustomer.setPendingVip(Boolean.parseBoolean(customer.getOrDefault("pendingVip", false).toString()));
             
-            // Tính toán tổng tiền (dùng cartItems)
+            String customerIdStr = customer.get("id") != null ? customer.get("id").toString() : null;
+            boolean isExistingCustomer = customerIdStr != null && 
+                                       !customerIdStr.isEmpty() && 
+                                       !"null".equals(customerIdStr) &&
+                                       !customerIdStr.equals("0");
+            
+            if (isExistingCustomer) {
+                // KHÁCH HÀNG CŨ - LOAD TỪ DATABASE
+                try {
+                    Long customerIdLong = Long.valueOf(customerIdStr);
+                    Optional<Customer> existingCustomerOpt = customerService.getCustomerById(customerIdLong);
+                    
+                    if (existingCustomerOpt.isPresent()) {
+                        selectedCustomer = existingCustomerOpt.get();
+                        
+                        System.out.println("=== LOADED EXISTING CUSTOMER ===");
+                        System.out.println("ID: " + selectedCustomer.getId());
+                        System.out.println("Name: " + selectedCustomer.getName());
+                        System.out.println("Date of Birth: " + selectedCustomer.getDateOfBirth());
+                        System.out.println("=================================");
+                        
+                    } else {
+                        System.err.println("Không tìm thấy khách hàng với ID: " + customerIdLong);
+                        selectedCustomer = createCustomerFromFormData(customer);
+                    }
+                    
+                } catch (NumberFormatException e) {
+                    System.err.println("Lỗi parse customer ID: " + customerIdStr);
+                    selectedCustomer = createCustomerFromFormData(customer);
+                } catch (Exception e) {
+                    System.err.println("Lỗi load khách hàng từ DB: " + e.getMessage());
+                    e.printStackTrace();
+                    selectedCustomer = createCustomerFromFormData(customer);
+                }
+                
+            } else {
+                // KHÁCH HÀNG MỚI - TỪ FORM
+                selectedCustomer = createCustomerFromFormData(customer);
+                
+                System.out.println("=== NEW CUSTOMER FROM FORM ===");
+                System.out.println("Name: " + selectedCustomer.getName());
+                System.out.println("Date of Birth: " + selectedCustomer.getDateOfBirth());
+                System.out.println("===============================");
+            }
+
+            // Tính toán giá
             double subtotal = cartItems.stream()
                 .mapToDouble(item -> item.getQuantity() * item.getPrice())
                 .sum();
+                
             double vipDiscountAmount = 0.0;
-            if (selectedCustomer.isVip()) {
-                vipDiscountAmount = subtotal * (selectedCustomer.getVipDiscountPercent() / 100);
+            if (selectedCustomer.isVip() && selectedCustomer.getVipDiscountPercent() != null) {
+                vipDiscountAmount = subtotal * (selectedCustomer.getVipDiscountPercent() / 100.0);
             }
-            double finalAmount = subtotal - vipDiscountAmount;
             
-            // Lưu vào session với tên match GET method
+            double finalAmount = subtotal - vipDiscountAmount;
+
+            // Lưu vào session và model
             session.setAttribute("cartItems", cartItems);
             session.setAttribute("selectedCustomer", selectedCustomer);
             session.setAttribute("subtotal", subtotal);
             session.setAttribute("vipDiscountAmount", vipDiscountAmount);
             session.setAttribute("finalAmount", finalAmount);
-            
-            // Thêm vào model
+
             model.addAttribute("cartItems", cartItems);
             model.addAttribute("selectedCustomer", selectedCustomer);
             model.addAttribute("subtotal", subtotal);
             model.addAttribute("vipDiscountAmount", vipDiscountAmount);
             model.addAttribute("finalAmount", finalAmount);
-            
-            // Log để debug
-            System.out.println("Converted CartItems: " + cartItems);
-            System.out.println("Converted Customer: " + selectedCustomer);
-            System.out.println("Subtotal: " + subtotal + ", VIP Discount: " + vipDiscountAmount + ", Final: " + finalAmount);
+
+            return "user/pos/payment";
             
         } catch (Exception e) {
             e.printStackTrace();
-            model.addAttribute("error", "Có lỗi xảy ra khi xử lý dữ liệu thanh toán. Vui lòng thử lại!");
+            model.addAttribute("error", "Có lỗi xảy ra khi xử lý dữ liệu thanh toán: " + e.getMessage());
             return "user/pos/interface";
         }
-        
-        return "user/pos/payment";
     }
 
+    // ==================== HELPER METHODS FOR DATE PARSING ====================
 
+    /**
+     * Parse date of birth from various formats
+     */
+    private LocalDate parseDateOfBirth(String dobStr) {
+        if (dobStr == null || dobStr.trim().isEmpty()) {
+            return null;
+        }
+        
+        dobStr = dobStr.trim();
+        
+        try {
+            // Format dd/MM/yyyy (from frontend)
+            if (dobStr.matches("\\d{2}/\\d{2}/\\d{4}")) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                LocalDate parsed = LocalDate.parse(dobStr, formatter);
+                System.out.println("✅ Parsed dd/MM/yyyy: " + dobStr + " -> " + parsed);
+                return parsed;
+            }
+            
+            // Format yyyy-MM-dd (ISO format)
+            if (dobStr.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                LocalDate parsed = LocalDate.parse(dobStr);
+                System.out.println("✅ Parsed yyyy-MM-dd: " + dobStr + " -> " + parsed);
+                return parsed;
+            }
+            
+            // Format dd-MM-yyyy
+            if (dobStr.matches("\\d{2}-\\d{2}-\\d{4}")) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+                LocalDate parsed = LocalDate.parse(dobStr, formatter);
+                System.out.println("✅ Parsed dd-MM-yyyy: " + dobStr + " -> " + parsed);
+                return parsed;
+            }
+            
+            // Fallback: try ISO format
+            LocalDate parsed = LocalDate.parse(dobStr);
+            System.out.println("✅ Parsed ISO fallback: " + dobStr + " -> " + parsed);
+            return parsed;
+            
+        } catch (DateTimeParseException e) {
+            System.err.println("❌ Cannot parse date: " + dobStr + " - " + e.getMessage());
+            System.err.println("❌ Supported formats: dd/MM/yyyy, yyyy-MM-dd, dd-MM-yyyy");
+            throw new RuntimeException("Invalid date format: " + dobStr + ". Expected formats: dd/MM/yyyy, yyyy-MM-dd, dd-MM-yyyy", e);
+        }
+    }
 
-// Thêm endpoint này
-// ...existing code...
+    private Customer createCustomerFromFormData(Map<String, Object> customerData) {
+        Customer customer = new Customer();
+        
+        // Xử lý ID
+        if (customerData.get("id") != null && !customerData.get("id").toString().isEmpty() && !"null".equals(customerData.get("id").toString())) {
+            try {
+                customer.setId(Long.valueOf(customerData.get("id").toString()));
+            } catch (NumberFormatException e) {
+                customer.setId(null);
+            }
+        }
+        
+        // Thông tin cơ bản
+        customer.setName(getStringValue(customerData, "name"));
+        customer.setPhone(getStringValue(customerData, "phone"));
+        customer.setEmail(getStringValue(customerData, "email"));
+        
+        // Địa chỉ
+        customer.setAddress(getStringValue(customerData, "address"));
+        customer.setWard(getStringValue(customerData, "ward"));
+        customer.setDistrict(getStringValue(customerData, "district"));
+        customer.setProvince(getStringValue(customerData, "province"));
+        
+        // XỬ LÝ NGÀY SINH VỚI PARSE AN TOÀN
+        String dobStr = getStringValue(customerData, "dateOfBirth");
+        if (dobStr != null && !dobStr.trim().isEmpty()) {
+            try {
+                LocalDate dateOfBirth = parseDateOfBirth(dobStr);
+                customer.setDateOfBirth(dateOfBirth);
+                System.out.println("✅ Set date of birth for customer: " + dobStr + " -> " + dateOfBirth);
+            } catch (Exception e) {
+                System.err.println("❌ Error parsing date of birth in createCustomerFromFormData: " + dobStr + " - " + e.getMessage());
+                customer.setDateOfBirth(null);
+            }
+        } else {
+            System.out.println("⚠️ Date of birth is empty or null");
+            customer.setDateOfBirth(null);
+        }
+        
+        // Thông tin VIP
+        customer.setVip(getBooleanValue(customerData, "vip", false));
+        customer.setPendingVip(getBooleanValue(customerData, "pendingVip", false));
+        
+        // VIP discount percent
+        try {
+            double vipDiscount = getDoubleValue(customerData, "vipDiscountPercent", 0.0);
+            customer.setVipDiscountPercent(vipDiscount);
+        } catch (Exception e) {
+            customer.setVipDiscountPercent(0.0);
+        }
+        
+        return customer;
+    }
 
-@GetMapping("/receipt-data/{orderId}")
+    private String getStringValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null || "null".equals(value.toString()) || value.toString().trim().isEmpty()) {
+            return null;
+        }
+        return value.toString().trim();
+    }
+
+    private boolean getBooleanValue(Map<String, Object> map, String key, boolean defaultValue) {
+        try {
+            Object value = map.get(key);
+            if (value == null) return defaultValue;
+            return Boolean.parseBoolean(value.toString());
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private double getDoubleValue(Map<String, Object> map, String key, double defaultValue) {
+        try {
+            Object value = map.get(key);
+            if (value == null) return defaultValue;
+            return Double.parseDouble(value.toString());
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    @GetMapping("/customer/{id}")
+    @ResponseBody
+    public ResponseEntity<Customer> getCustomerById(@PathVariable Long id) {
+        try {
+            Optional<Customer> customer = customerService.getCustomerById(id);
+            if (customer.isPresent()) {
+                Customer c = customer.get();
+                
+                System.out.println("=== API GET CUSTOMER BY ID ===");
+                System.out.println("ID: " + c.getId());
+                System.out.println("Name: " + c.getName());
+                System.out.println("Phone: " + c.getPhone());
+                System.out.println("Email: " + c.getEmail());
+                System.out.println("Date of Birth: " + c.getDateOfBirth());
+                System.out.println("VIP: " + c.isVip());
+                System.out.println("===============================");
+                
+                return ResponseEntity.ok(c);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/receipt-data/{orderId}")
 @ResponseBody
 public Map<String, Object> getReceiptData(@PathVariable Long orderId) {
     try {
@@ -553,22 +864,38 @@ public Map<String, Object> getReceiptData(@PathVariable Long orderId) {
             data.put("orderNumber", order.getOrderNumber());
             data.put("createdAt", order.getCreatedAt());
             data.put("status", order.getStatus());
-            // Xử lý customer có thể null cho khách lẻ
+            
+            // THÊM THÔNG TIN THU NGÂN
+            data.put("cashierName", order.getCreatedBy()); // Trả về username
+            data.put("createdBy", order.getCreatedBy()); // Backup field
+            
             if (order.getCustomer() != null) {
                 Map<String, Object> customerMap = new HashMap<>();
                 customerMap.put("name", order.getCustomer().getName());
                 customerMap.put("phone", order.getCustomer().getPhone());
+                customerMap.put("email", order.getCustomer().getEmail());
                 customerMap.put("address", order.getCustomer().getAddress());
+                customerMap.put("ward", order.getCustomer().getWard());
+                customerMap.put("district", order.getCustomer().getDistrict());
+                customerMap.put("province", order.getCustomer().getProvince());
+                customerMap.put("dateOfBirth", order.getCustomer().getDateOfBirth());
                 customerMap.put("vip", order.getCustomer().isVip());
+                customerMap.put("pendingVip", order.getCustomer().getPendingVip()); // Thêm pendingVip
                 data.put("customer", customerMap);
             } else {
                 Map<String, Object> customerMap = new HashMap<>();
                 customerMap.put("name", "Khách lẻ");
                 customerMap.put("phone", null);
                 customerMap.put("address", null);
+                customerMap.put("ward", null);
+                customerMap.put("district", null);
+                customerMap.put("province", null);
+                customerMap.put("dateOfBirth", null);
                 customerMap.put("vip", false);
+                customerMap.put("pendingVip", false); // Thêm pendingVip
                 data.put("customer", customerMap);
             }
+            
             data.put("items", order.getItems().stream().map(item -> {
                 Map<String, Object> itemMap = new HashMap<>();
                 itemMap.put("name", item.getProduct().getName());
@@ -577,9 +904,12 @@ public Map<String, Object> getReceiptData(@PathVariable Long orderId) {
                 itemMap.put("totalPrice", item.getTotalPrice());
                 return itemMap;
             }).toList());
+            
             data.put("totalAmount", order.getTotalAmount());
             data.put("vipDiscountAmount", order.getVipDiscountAmount());
             data.put("finalAmount", order.getFinalAmount());
+            data.put("paymentMethod", order.getPaymentMethod());
+            
             return Map.of("success", true, "data", data);
         } else {
             return Map.of("success", false, "message", orderResult.get("message"));
@@ -588,9 +918,6 @@ public Map<String, Object> getReceiptData(@PathVariable Long orderId) {
         return Map.of("success", false, "message", e.getMessage());
     }
 }
-
-// ...existing code...
-// ...existing code...
     // ==================== CLEAR SESSION ====================
 
     @PostMapping("/clear-session")
@@ -604,174 +931,95 @@ public Map<String, Object> getReceiptData(@PathVariable Long orderId) {
         return "redirect:/user/pos";
     }
 
-    // ==================== CHECKOUT (Updated to use POSService) ====================
+    // ==================== ORDER HISTORY ====================
 
-    @PostMapping("/checkout")
-    public String checkout(@RequestParam(required = false) Long customerId,
-                         @RequestParam(required = false) String customerName,
-                         @RequestParam(required = false) String customerPhone,
-                         @RequestParam(defaultValue = "false") boolean createVipRequest,
-                         HttpSession session,
-                         RedirectAttributes redirectAttributes) {
-        try {
-            List<CartItem> cartItems = (List<CartItem>) session.getAttribute("cartItems");
-            if (cartItems == null || cartItems.isEmpty()) {
-                redirectAttributes.addFlashAttribute("error", "Giỏ hàng trống");
-                return "redirect:/user/pos";
-            }
-
-            OrderRequest orderRequest = convertCartToOrderRequest(cartItems, customerId, customerName, customerPhone, createVipRequest);
-
-            Map<String, Object> result;
-            try {
-                result = posService.processOrder(orderRequest);
-            } catch (Exception ex) {
-                redirectAttributes.addFlashAttribute("error", "Không tải được dữ liệu từ database: " + ex.getMessage());
-                return "redirect:/user/pos";
-            }
-
-            if ((Boolean) result.get("success")) {
-                session.removeAttribute("cartItems");
-
-                Long orderId = (Long) result.get("orderId");
-                String orderNumber = (String) result.get("orderNumber");
-                Boolean vipRequestCreated = (Boolean) result.get("vipRequestCreated");
-
-                redirectAttributes.addFlashAttribute("success", 
-                    "Đơn hàng " + orderNumber + " đã được tạo thành công!");
-                
-                if (vipRequestCreated) {
-                    redirectAttributes.addFlashAttribute("vipMessage", 
-                        "Yêu cầu VIP đã được tạo và đang chờ duyệt!");
-                }
-
-                return "redirect:/user/pos/receipt/" + orderId;
-            } else {
-                redirectAttributes.addFlashAttribute("error", result.get("message"));
-                return "redirect:/user/pos";
-            }
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", 
-                "Có lỗi xảy ra khi tạo đơn hàng: " + e.getMessage());
-            return "redirect:/user/pos";
-        }
+    @GetMapping("/history")
+public String userOrderHistory(
+        @RequestParam(required = false) String date,
+        @RequestParam(required = false) String customerName,
+        Model model,
+        HttpSession session) {
+    String username = (String) session.getAttribute("username");
+    if (username == null) {
+        return "redirect:/login";
     }
+    
+    try {
+        List<Order> orders = posService.getOrdersByUsername(username);
 
-    @PostMapping("/process-order")
-    @ResponseBody
-    public Map<String, Object> processOrder(@RequestBody Map<String, Object> orderData, HttpSession session) {
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            String username = (String) session.getAttribute("username");
-            if (username == null) {
-                response.put("success", false);
-                response.put("message", "Phiên đăng nhập hết hạn");
-                return response;
-            }
-            
-            OrderRequest orderRequest = convertOrderDataToOrderRequest(orderData);
-
-            if (orderRequest.getCustomer() == null) {
-                response.put("success", false);
-                response.put("message", "Thông tin khách hàng không được để trống!");
-                return response;
-            }
-            
-            Map<String, Object> result;
-            try {
-                result = posService.processOrder(orderRequest);
-            } catch (Exception ex) {
-                response.put("success", false);
-                response.put("message", "Không tải được dữ liệu từ database: " + ex.getMessage());
-                return response;
-            }
-            
-            if ((Boolean) result.get("success")) {
-                session.removeAttribute("cartItems");
-                
-                response.put("success", true);
-                response.put("orderId", result.get("orderId"));
-                response.put("orderNumber", result.get("orderNumber"));
-                response.put("finalAmount", result.get("finalAmount"));
-                response.put("vipRequestCreated", result.get("vipRequestCreated"));
-                response.put("isVipOrder", result.get("isVipOrder"));
-            } else {
-                response.put("success", false);
-                response.put("message", result.get("message"));
-            }
-            
-        } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Có lỗi xảy ra: " + e.getMessage());
+        // Lọc theo ngày nếu được cung cấp
+        if (date != null && !date.isEmpty()) {
+            orders = orders.stream()
+                .filter(order -> {
+                    String orderDate = order.getCreatedAt().toLocalDate().toString();
+                    return orderDate.equals(date);
+                })
+                .toList();
         }
+
+        // Lọc theo tên khách hàng nếu được cung cấp
+        if (customerName != null && !customerName.trim().isEmpty()) {
+            String searchName = customerName.trim().toLowerCase();
+            orders = orders.stream()
+                .filter(order -> {
+                    if (order.getCustomer() == null || order.getCustomer().getName() == null) return false;
+                    String orderCustomerName = order.getCustomer().getName().trim().toLowerCase();
+                    return orderCustomerName.contains(searchName);
+                })
+                .toList();
+        }
+
+        model.addAttribute("orders", orders);
+        model.addAttribute("staffName", username);
+        return "user/pos/history";
         
-        return response;
+    } catch (Exception e) {
+        model.addAttribute("error", "Có lỗi xảy ra khi tải lịch sử đơn hàng: " + e.getMessage());
+        return "user/pos/history";
     }
+}
 
-    // Helper method để chuyển đổi dữ liệu từ frontend
-    private OrderRequest convertOrderDataToOrderRequest(Map<String, Object> orderData) {
-        OrderRequest request = new OrderRequest();
-        
-        Map<String, Object> customerData = (Map<String, Object>) orderData.get("customer");
-        if (customerData != null && customerData.get("id") != null) {
-            OrderRequest.CustomerInfo customerInfo = new OrderRequest.CustomerInfo();
-            customerInfo.setId(Long.valueOf(customerData.get("id").toString()));
-            customerInfo.setName((String) customerData.get("name"));
-            customerInfo.setPhone((String) customerData.get("phone"));
-            request.setCustomer(customerInfo);
-        }
-        
-        List<Map<String, Object>> itemsData = (List<Map<String, Object>>) orderData.get("items");
-        List<OrderRequest.OrderItemInfo> items = new ArrayList<>();
-        for (Map<String, Object> itemData : itemsData) {
-            OrderRequest.OrderItemInfo item = new OrderRequest.OrderItemInfo();
-            item.setId(Long.valueOf(itemData.get("id").toString()));
-            item.setQuantity(Integer.valueOf(itemData.get("quantity").toString()));
-            item.setPrice(Double.valueOf(itemData.get("price").toString()));
-            item.setTotal(Double.valueOf(itemData.get("total").toString()));
-            items.add(item);
-        }
-        request.setItems(items);
-        
-        request.setTotalAmount(Double.valueOf(orderData.get("totalAmount").toString()));
-        request.setVipDiscountAmount(Double.valueOf(orderData.get("vipDiscountAmount").toString()));
-        request.setFinalAmount(Double.valueOf(orderData.get("finalAmount").toString()));
-        request.setVipOrder((Boolean) orderData.get("vipOrder"));
-        request.setCreateVipRequest((Boolean) orderData.get("createVipRequest"));
-        
-        return request;
+@GetMapping("/history/{id}")
+public String viewOrderDetail(@PathVariable Long id, Model model, HttpSession session) {
+    String username = (String) session.getAttribute("username");
+    if (username == null) {
+        return "redirect:/login";
     }
-
-    // ==================== RECEIPT ====================
-
-    @GetMapping("/receipt/{orderId}")
-    public String showReceipt(@PathVariable Long orderId, Model model) {
-        try {
-            Map<String, Object> orderResult = posService.getOrderById(orderId);
+    
+    try {
+        Map<String, Object> orderResult = posService.getOrderById(id);
+        
+        if (orderResult.get("success") != null && (Boolean) orderResult.get("success")) {
+            Order order = (Order) orderResult.get("order");
             
-            if ((Boolean) orderResult.get("success")) {
-                Order order = (Order) orderResult.get("order");
-                
-                model.addAttribute("order", order);
-                model.addAttribute("orderItems", order.getItems());
-                
-                return "user/pos/receipt";
-            } else {
-                model.addAttribute("error", "Không tìm thấy đơn hàng");
-                return "redirect:/user/pos";
-            }
-        } catch (Exception e) {
-            model.addAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
-            return "redirect:/user/pos";
+            // Thêm thông tin thu ngân (cashier name)
+            model.addAttribute("order", order);
+            model.addAttribute("cashierName", username);
+            
+            return "user/pos/historyoder";
+        } else {
+            model.addAttribute("error", "Không tìm thấy hóa đơn với ID: " + id);
+            return "redirect:/user/pos/history";
         }
+        
+    } catch (Exception e) {
+        System.err.println("❌ Lỗi khi tải chi tiết đơn hàng ID " + id + ": " + e.getMessage());
+        e.printStackTrace();
+        model.addAttribute("error", "Có lỗi xảy ra khi tải chi tiết hóa đơn: " + e.getMessage());
+        return "redirect:/user/pos/history";
     }
+}
 
+// THÊM METHOD ĐỂ HỖ TRỢ BACKWARD COMPATIBILITY (nếu cần)
+@GetMapping("/historyoder")
+public String viewOrderDetailLegacy(@RequestParam("id") Long id, Model model, HttpSession session) {
+    // Redirect to new endpoint
+    return "redirect:/user/pos/history/" + id;
+}
     // ==================== HELPER METHODS ====================
 
-    private OrderRequest convertCartToOrderRequest(List<CartItem> cartItems, Long customerId, 
-                                                  String customerName, String customerPhone, 
+    private OrderRequest convertCartToOrderRequest(List<CartItem> cartItems, Long customerId,
+                                                  String customerName, String customerPhone,
                                                   boolean createVipRequest) {
         OrderRequest orderRequest = new OrderRequest();
 
@@ -811,12 +1059,19 @@ public Map<String, Object> getReceiptData(@PathVariable Long orderId) {
         customerInfo.setId(customer.getId());
         customerInfo.setName(customer.getName());
         customerInfo.setPhone(customer.getPhone());
+        customerInfo.setEmail(customer.getEmail());
+        
         customerInfo.setAddress(customer.getAddress());
+        customerInfo.setWard(customer.getWard());
+        customerInfo.setDistrict(customer.getDistrict());
+        customerInfo.setProvince(customer.getProvince());
+        customerInfo.setDateOfBirth(customer.getDateOfBirth()); // ĐẢM BẢO NGÀY SINH ĐƯỢC TRUYỀN
         customerInfo.setVip(customer.isVip());
-        customerInfo.setPendingVip(customer.isPendingVip());
+        customerInfo.setPendingVip(customer.getPendingVip() != null ? customer.getPendingVip() : false);
+        customerInfo.setVipDiscountPercent(customer.getVipDiscountPercent() != null ? customer.getVipDiscountPercent().intValue() : 0);
         return customerInfo;
     }
-
+    
     private List<OrderRequest.OrderItemInfo> convertCartItemsToOrderItems(List<CartItem> cartItems) {
         List<OrderRequest.OrderItemInfo> orderItems = new ArrayList<>();
         for (CartItem cartItem : cartItems) {
@@ -832,7 +1087,7 @@ public Map<String, Object> getReceiptData(@PathVariable Long orderId) {
     }
 
     // ==================== INNER CLASSES ====================
-    
+
     public static class CartItem {
         private Long productId;
         private String productName;

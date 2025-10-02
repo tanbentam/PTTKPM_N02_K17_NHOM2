@@ -198,9 +198,33 @@ public class OrderService {
     
     private void updateCustomerStats(Customer customer, double orderAmount) {
         try {
-            customer.addOrder(orderAmount); // Cập nhật VIP status
-            customerService.saveCustomer(customer);
-            System.out.println("👤 Cập nhật thông tin khách hàng: " + customer.getVipLevel());
+            Customer dbCustomer = customerService.findById(customer.getId());
+            if (dbCustomer != null) {
+                double oldTotal = dbCustomer.getTotalSpent() != null ? dbCustomer.getTotalSpent() : 0.0;
+                int oldOrderCount = dbCustomer.getOrderCount() != null ? dbCustomer.getOrderCount() : 0;
+                double newTotalSpent = oldTotal + orderAmount;
+                int newOrderCount = oldOrderCount + 1;
+                dbCustomer.setTotalSpent(newTotalSpent);
+                dbCustomer.setOrderCount(newOrderCount);
+
+                // Điều kiện VIP:
+                // 1. Nếu là hóa đơn đầu tiên và >= 2 triệu => VIP luôn
+                // 2. Nếu tích lũy >= 10 triệu => VIP
+                if (!Boolean.TRUE.equals(dbCustomer.getIsVip())) {
+                    if (newOrderCount == 1 && orderAmount >= 2_000_000) {
+                        dbCustomer.setIsVip(true);
+                        dbCustomer.setVipDiscountPercent(5.0);
+                        System.out.println("🌟 Khách hàng lên VIP do hóa đơn đầu tiên >= 2 triệu!");
+                    } else if (newTotalSpent >= 10_000_000) {
+                        dbCustomer.setIsVip(true);
+                        dbCustomer.setVipDiscountPercent(5.0);
+                        System.out.println("🌟 Khách hàng lên VIP do tích lũy >= 10 triệu!");
+                    }
+                }
+
+                customerService.saveCustomer(dbCustomer);
+                System.out.println("👤 Đã cập nhật tổng tiền và số đơn cho khách hàng: " + dbCustomer.getName());
+            }
         } catch (Exception e) {
             System.err.println("Lỗi cập nhật khách hàng: " + e.getMessage());
         }

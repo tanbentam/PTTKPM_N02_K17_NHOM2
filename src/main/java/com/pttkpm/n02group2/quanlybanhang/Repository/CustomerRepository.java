@@ -16,7 +16,7 @@ import java.util.Optional;
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
     
     // ==================== TÌM KIẾM CƠ BẢN ====================
-    
+    Optional<Customer> findByName(String name);
     // Tìm khách hàng theo số điện thoại
     Optional<Customer> findByPhone(String phone);
     

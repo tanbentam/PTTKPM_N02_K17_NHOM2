@@ -2,10 +2,13 @@ package com.pttkpm.n02group2.quanlybanhang.Repository;
 
 import com.pttkpm.n02group2.quanlybanhang.Model.Order;
 import com.pttkpm.n02group2.quanlybanhang.Model.Customer;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -18,16 +21,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByCreatedAtBetweenAndStatus(LocalDateTime startDate, LocalDateTime endDate, Order.OrderStatus status);
 
     // ==================== BASIC FINDERS ====================
-    
+    @Transactional
+void deleteByCustomerId(Long customerId);
     // Tìm đơn hàng theo khách hàng
     List<Order> findByCustomer(Customer customer);
     
     // Tìm đơn hàng theo trạng thái
     List<Order> findByStatus(Order.OrderStatus status);
     
-    // Tìm đơn hàng theo ID khách hàng
-    @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId")
-    List<Order> findByCustomerId(@Param("customerId") Long customerId);
     
     // Tìm đơn hàng theo ID khách hàng, sắp xếp theo ngày tạo giảm dần (cho POSService)
     List<Order> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
@@ -91,6 +92,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT o FROM Order o WHERE o.customer.id = :customerId ORDER BY o.orderDate DESC")
     List<Order> findCustomerOrderHistory(@Param("customerId") Long customerId);
     
+
+    // Method với phân trang
+    Page<Order> findByCustomerId(Long customerId, Pageable pageable);
+    
+    // Method không phân trang
+    List<Order> findByCustomerId(Long customerId);
     // ==================== RECENT ORDERS ====================
     
     // Đơn hàng gần đây nhất (cho dashboard)

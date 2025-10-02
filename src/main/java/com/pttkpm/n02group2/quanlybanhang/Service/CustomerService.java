@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator; // Thêm import này
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,9 @@ public class CustomerService {
 
     @Autowired
     private CustomerRepository customerRepository;
+
+    @Autowired
+    private OrderRepository orderRepository; // Di chuyển lên đầu
 
     // ==================== BASIC CRUD OPERATIONS ====================
     public List<Customer> findAll() {
@@ -154,37 +158,30 @@ public class CustomerService {
         }
     }
 
-    // ==================== VIP CONDITION METHODS ====================
-    
-    /**
-     * Tính tổng số tiền đã mua của khách hàng theo ID.
-     * TODO: Cần liên kết với OrderService để tính thực tế từ bảng hóa đơn
-     */
-    public long getTotalSpentByCustomer(Long customerId) {
-        Optional<Customer> customerOpt = getCustomerById(customerId);
-        if (customerOpt.isPresent() && customerOpt.get().getTotalSpent() != null) {
-            return customerOpt.get().getTotalSpent().longValue();
-        }
-        // TODO: Triển khai logic thực tế, ví dụ truy vấn tổng tiền từ bảng hóa đơn
-        // return orderRepository.sumTotalByCustomerId(customerId);
-        return 0L; // Trả về 0 nếu chưa có logic
+    public void deleteCustomerAndOrders(Long customerId) {
+        orderRepository.deleteByCustomerId(customerId);
+        customerRepository.deleteById(customerId);
     }
 
-    public boolean isFirstOrderOver2M(Long customerId) {
-        try {
-            // Lấy danh sách đơn hàng của khách hàng, sắp xếp theo ngày tạo
-            List<Order> orders = orderRepository.findByCustomerIdOrderByOrderDateAsc(customerId);
-            if (orders != null && !orders.isEmpty()) {
-                Order firstOrder = orders.get(0);
-                return firstOrder.getFinalAmount() != null && firstOrder.getFinalAmount() >= 2_000_000;
-            }
-        } catch (Exception e) {
-            System.err.println("Lỗi kiểm tra hóa đơn đầu tiên: " + e.getMessage());
-        }
-        return false;
+    public long getTotalSpentByCustomer(Long customerId) {
+        return orderRepository.findByCustomerId(customerId).stream()
+                .mapToLong(order -> order.getTotalAmount().longValue())
+                .sum();
     }
-@Autowired
-    private OrderRepository orderRepository; // Thêm dependency này
+    
+    public boolean isFirstOrderOver2M(Long customerId) {
+        List<Order> orders = orderRepository.findByCustomerId(customerId);
+        if (orders.isEmpty()) return false;
+        // Sắp xếp theo ngày tạo để lấy đơn đầu tiên
+        orders.sort(Comparator.comparing(Order::getCreatedAt));
+        return orders.get(0).getTotalAmount() >= 2_000_000;
+    }
+
+    // Xóa khách hàng và tất cả đơn hàng liên quan
+
+    public void deleteById(Long id) {
+        customerRepository.deleteById(id);
+    }
 
     // ==================== SEARCH METHODS ====================
     

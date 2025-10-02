@@ -5,7 +5,8 @@ import com.pttkpm.n02group2.quanlybanhang.Repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,6 +31,13 @@ public class OrderService {
 
     // ==================== MAIN CREATE ORDER METHOD ====================
     
+
+    public Page<Order> findByCustomerId(Long customerId, Pageable pageable) {
+        System.out.println("Finding orders for customer ID: " + customerId);
+        Page<Order> result = orderRepository.findByCustomerId(customerId, pageable);
+        System.out.println("Found " + result.getTotalElements() + " orders");
+        return result;
+    }
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(Customer customer, List<OrderItem> orderItems) {
         try {
@@ -81,6 +89,11 @@ public class OrderService {
 
     // ==================== HELPER METHODS ====================
     
+    
+    // Nếu chưa có method này, thêm luôn
+    public List<Order> findByCustomerId(Long customerId) {
+        return orderRepository.findByCustomerId(customerId);
+    }
     private void validateAndLockInventory(List<OrderItem> orderItems) {
         System.out.println("--- KIỂM TRA TỒN KHO ---");
         

@@ -85,52 +85,51 @@ public class CustomerController {
         return "admin/customers/index";
     }
 
-    // ...existing code...
-
     // ==================== XEM CHI TIẾT KHÁCH HÀNG ====================
-    @GetMapping("/{id}")
-public String viewCustomer(@PathVariable Long id, Model model) {
-    try {
-        Optional<Customer> customerOpt = customerService.getCustomerById(id);
-        if (customerOpt.isPresent()) {
-            Customer customer = customerOpt.get();
+    @GetMapping("/{id}/profile")
+    public String viewCustomerProfile(@PathVariable Long id, Model model) {
+        try {
+            Optional<Customer> customerOpt = customerService.getCustomerById(id);
+            if (customerOpt.isPresent()) {
+                Customer customer = customerOpt.get();
 
-            // Lấy tổng tiền đã mua và kiểm tra điều kiện VIP
-            long totalSpent = customerService.getTotalSpentByCustomer(id);
-            boolean firstOrderOver2M = customerService.isFirstOrderOver2M(id);
-            boolean canBeVip = (firstOrderOver2M || totalSpent >= 10_000_000);
+                // Lấy tổng tiền đã mua và kiểm tra điều kiện VIP
+                long totalSpent = customerService.getTotalSpentByCustomer(id);
+                boolean firstOrderOver2M = customerService.isFirstOrderOver2M(id);
+                boolean canBeVip = (firstOrderOver2M || totalSpent >= 10_000_000);
 
-            model.addAttribute("customer", customer);
-            model.addAttribute("totalSpent", totalSpent);
-            model.addAttribute("firstOrderOver2M", firstOrderOver2M);
-            model.addAttribute("canBeVip", canBeVip);
+                model.addAttribute("customer", customer);
+                model.addAttribute("totalSpent", totalSpent);
+                model.addAttribute("firstOrderOver2M", firstOrderOver2M);
+                model.addAttribute("canBeVip", canBeVip);
 
-            // Thông tin chi tiết điều kiện VIP
-            if (!customer.isVip()) {
-                long remainingToVip = Math.max(0, 10_000_000 - totalSpent);
-                model.addAttribute("remainingToVip", remainingToVip);
+                // Thông tin chi tiết điều kiện VIP
+                if (!customer.isVip()) {
+                    long remainingToVip = Math.max(0, 10_000_000 - totalSpent);
+                    model.addAttribute("remainingToVip", remainingToVip);
 
-                String vipConditionMessage;
-                if (firstOrderOver2M) {
-                    vipConditionMessage = "Đủ điều kiện lên VIP (hóa đơn đầu tiên ≥ 2 triệu)";
-                } else if (totalSpent >= 10_000_000) {
-                    vipConditionMessage = "Đủ điều kiện lên VIP (tích lũy ≥ 10 triệu)";
-                } else {
-                    vipConditionMessage = String.format("Còn thiếu %,d VNĐ để lên VIP", remainingToVip);
+                    String vipConditionMessage;
+                    if (firstOrderOver2M) {
+                        vipConditionMessage = "Đủ điều kiện lên VIP (hóa đơn đầu tiên ≥ 2 triệu)";
+                    } else if (totalSpent >= 10_000_000) {
+                        vipConditionMessage = "Đủ điều kiện lên VIP (tích lũy ≥ 10 triệu)";
+                    } else {
+                        vipConditionMessage = String.format("Còn thiếu %,d VNĐ để lên VIP", remainingToVip);
+                    }
+                    model.addAttribute("vipConditionMessage", vipConditionMessage);
                 }
-                model.addAttribute("vipConditionMessage", vipConditionMessage);
-            }
 
-            return "admin/customers/view";
-        } else {
-            model.addAttribute("error", "Không tìm thấy khách hàng với ID: " + id);
+                return "admin/customers/view";
+            } else {
+                model.addAttribute("error", "Không tìm thấy khách hàng với ID: " + id);
+                return "admin/customers/index";
+            }
+        } catch (Exception e) {
+            model.addAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
             return "admin/customers/index";
         }
-    } catch (Exception e) {
-        model.addAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
-        return "admin/customers/index";
     }
-}
+
     // ==================== API FOR POS SYSTEM ====================
     @PostMapping("/api/customers")
     @ResponseBody

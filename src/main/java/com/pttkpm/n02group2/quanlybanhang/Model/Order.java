@@ -52,6 +52,10 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderItem> items;
 
+    // SỬA LẠI: Bỏ @ManyToOne và @JoinColumn sai, thay bằng @Column
+    @Column(name = "payment_method")
+    private String paymentMethod;
+
     // Enum cho trạng thái đơn hàng
     public enum OrderStatus {
         PENDING,    // Đang chờ xử lý
@@ -59,16 +63,6 @@ public class Order {
         CANCELLED   // Đã hủy
     }
 
-    
-private String paymentMethod;
-
-public String getPaymentMethod() {
-    return paymentMethod;
-}
-
-public void setPaymentMethod(String paymentMethod) {
-    this.paymentMethod = paymentMethod;
-}
     // Constructors
     public Order() {}
 
@@ -112,6 +106,9 @@ public void setPaymentMethod(String paymentMethod) {
     public List<OrderItem> getItems() { return items; }
     public void setItems(List<OrderItem> items) { this.items = items; }
 
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -120,7 +117,7 @@ public void setPaymentMethod(String paymentMethod) {
             status = OrderStatus.PENDING;
         }
         if (orderDate == null) {
-            orderDate = new Date(); // Đảm bảo không null khi lưu
+            orderDate = new Date();
         }
     }
 

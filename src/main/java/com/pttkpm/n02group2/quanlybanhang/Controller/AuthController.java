@@ -17,6 +17,23 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    // ==================== TRANG CHỦ ====================
+    @GetMapping("/")
+    public String home(HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        
+        if (user == null) {
+            return "redirect:/login";
+        }
+        
+        // Chuyển hướng theo vai trò
+        if (user.getRole() == User.Role.ADMIN) {
+            return "redirect:/admin/dashboard";
+        } else {
+            return "redirect:/user/pos";
+        }
+    }
+
     // MAPPING CHO /login (không có prefix)
     @GetMapping("/login")
     public String showLoginForm(Model model, HttpSession session) {
@@ -51,7 +68,7 @@ public class AuthController {
                     return "redirect:/login";
                 }
                 
-                // Set session attributes theo format HomeController expect
+                // Set session attributes
                 session.setAttribute("user", user);
                 session.setAttribute("username", user.getUsername());
                 session.setAttribute("userRole", user.getRole().name());
@@ -62,8 +79,12 @@ public class AuthController {
                 redirectAttributes.addFlashAttribute("success", 
                     "Đăng nhập thành công với quyền " + roleText + "!");
                 
-                // Redirect về trang chủ
-                return "redirect:/";
+                // Redirect theo vai trò
+                if (user.getRole() == User.Role.ADMIN) {
+                    return "redirect:/admin/dashboard";  // Admin đến dashboard riêng
+                } else {
+                    return "redirect:/user/pos";         // User đến POS
+                }
             }
             
             redirectAttributes.addFlashAttribute("error", "Tên đăng nhập hoặc mật khẩu không đúng");

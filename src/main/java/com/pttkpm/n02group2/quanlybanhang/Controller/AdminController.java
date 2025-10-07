@@ -18,18 +18,20 @@ import com.pttkpm.n02group2.quanlybanhang.Model.OrderItem;
 import com.pttkpm.n02group2.quanlybanhang.Model.User;
 import com.pttkpm.n02group2.quanlybanhang.Service.CustomerService;
 import com.pttkpm.n02group2.quanlybanhang.Service.OrderService;
+import com.pttkpm.n02group2.quanlybanhang.Service.ProductService;
 
 import java.util.List;
 import jakarta.servlet.http.HttpSession;
 
 @Controller
 @RequestMapping("/admin")
-
 public class AdminController {
     @Autowired
     private CustomerService customerService;
     @Autowired
     private OrderService orderService;
+    @Autowired
+    private ProductService productService;
 
     // ==================== DASHBOARD ====================
     @GetMapping("/dashboard")
@@ -39,21 +41,35 @@ public class AdminController {
             return "redirect:/login";
         }
 
-        // Lấy username để hiển thị
-        model.addAttribute("username", user.getUsername());
-        
-        // Thống kê (tạm thời hard-code cho đến khi có service thực tế)
-        long totalProducts = 11;
-        long totalCustomers = 52;  // Hard-code thay vì customerService.countAll()
-        long totalOrders = 107;
-        String totalRevenue = "106,002,000";
+        try {
+            // Lấy username để hiển thị
+            model.addAttribute("username", user.getUsername());
 
-        model.addAttribute("totalProducts", totalProducts);
-        model.addAttribute("totalCustomers", totalCustomers);
-        model.addAttribute("totalOrders", totalOrders);
-        model.addAttribute("totalRevenue", totalRevenue);
+            // Lấy thống kê thực tế từ database
+            long totalProducts = productService.countAll();
+            long totalCustomers = customerService.countAll();
+            long totalOrders = orderService.countAll();
+            double totalRevenue = orderService.getTotalRevenue();
 
-        return "admin/dashboard";
+            // Format doanh thu
+            String formattedRevenue = String.format("%,.0f", totalRevenue);
+
+            model.addAttribute("totalProducts", totalProducts);
+            model.addAttribute("totalCustomers", totalCustomers);
+            model.addAttribute("totalOrders", totalOrders);
+            model.addAttribute("totalRevenue", formattedRevenue);
+
+            return "admin/dashboard";
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Fallback nếu có lỗi
+            model.addAttribute("totalProducts", 0);
+            model.addAttribute("totalCustomers", 0);
+            model.addAttribute("totalOrders", 0);
+            model.addAttribute("totalRevenue", "0");
+            model.addAttribute("error", "Không thể tải thống kê: " + e.getMessage());
+            return "admin/dashboard";
+        }
     }
 
     // ==================== ORDERS ====================
@@ -66,52 +82,53 @@ public class AdminController {
         return "admin/orders";
     }
 
-   @GetMapping("/orders/{id}")
-public String viewOrder(@PathVariable Long id, Model model, HttpSession session) {
-    User user = (User) session.getAttribute("user");
-    if (user == null || user.getRole() != User.Role.ADMIN) {
-        return "redirect:/login";
-    }
-    
-    try {
-        Order order = orderService.findById(id);
-        if (order == null) {
-            return "redirect:/admin/customers";
+    @GetMapping("/orders/{id}")
+    public String viewOrder(@PathVariable Long id, Model model, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            return "redirect:/login";
         }
-        
-        Customer customer = order.getCustomer();
-        
-        // Lấy danh sách sản phẩm đã mua
-        List<OrderItem> orderItems = order.getItems();
-        
-        // Tính tổng tiền gốc từ các sản phẩm
-        double originalTotal = orderItems.stream()
-            .mapToDouble(item -> item.getQuantity() * item.getPrice())
-            .sum();
-        
-        // Số tiền thực tế khách đã thanh toán (từ database)
-        double actualPaidAmount = order.getFinalAmount() != null ? order.getFinalAmount() : order.getTotalAmount();
-        
-        // Tính số tiền giảm giá thực tế (nếu có)
-        double actualDiscount = originalTotal - actualPaidAmount;
-        
-        // Chỉ hiển thị giảm giá nếu thực sự có giảm giá
-        boolean hasDiscount = actualDiscount > 0;
-        
-        model.addAttribute("order", order);
-        model.addAttribute("customer", customer);
-        model.addAttribute("orderItems", orderItems);
-        model.addAttribute("originalTotal", originalTotal);  // Tổng tiền gốc
-        model.addAttribute("actualDiscount", hasDiscount ? actualDiscount : 0);  // Giảm giá thực tế
-        model.addAttribute("actualPaidAmount", actualPaidAmount);  // Số tiền thực tế đã thanh toán
-        model.addAttribute("hasDiscount", hasDiscount);  // Có giảm giá hay không
-        
-        return "admin/customers/bill";
-    } catch (Exception e) {
-        e.printStackTrace();
-        return "error";
+
+        try {
+            Order order = orderService.findById(id);
+            if (order == null) {
+                return "redirect:/admin/customers";
+            }
+
+            Customer customer = order.getCustomer();
+
+            // Lấy danh sách sản phẩm đã mua
+            List<OrderItem> orderItems = order.getItems();
+
+            // Tính tổng tiền gốc từ các sản phẩm
+            double originalTotal = orderItems.stream()
+                .mapToDouble(item -> item.getQuantity() * item.getPrice())
+                .sum();
+
+            // Số tiền thực tế khách đã thanh toán (từ database)
+            double actualPaidAmount = order.getFinalAmount() != null ? order.getFinalAmount() : order.getTotalAmount();
+
+            // Tính số tiền giảm giá thực tế (nếu có)
+            double actualDiscount = originalTotal - actualPaidAmount;
+
+            // Chỉ hiển thị giảm giá nếu thực sự có giảm giá
+            boolean hasDiscount = actualDiscount > 0;
+
+            model.addAttribute("order", order);
+            model.addAttribute("customer", customer);
+            model.addAttribute("orderItems", orderItems);
+            model.addAttribute("originalTotal", originalTotal);  // Tổng tiền gốc
+            model.addAttribute("actualDiscount", hasDiscount ? actualDiscount : 0);  // Giảm giá thực tế
+            model.addAttribute("actualPaidAmount", actualPaidAmount);  // Số tiền thực tế đã thanh toán
+            model.addAttribute("hasDiscount", hasDiscount);  // Có giảm giá hay không
+
+            return "admin/customers/bill";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "error";
+        }
     }
-}
+
     // ==================== CUSTOMERS ====================
     @GetMapping("/customers/{id}/delete")
     public String deleteCustomer(@PathVariable Long id, RedirectAttributes redirectAttributes, HttpSession session) {
@@ -139,7 +156,7 @@ public String viewOrder(@PathVariable Long id, Model model, HttpSession session)
     }
 
     @GetMapping("/customers/{id}")
-    public String viewCustomer(@PathVariable Long id, 
+    public String viewCustomer(@PathVariable Long id,
                               @RequestParam(defaultValue = "0") int page,
                               @RequestParam(defaultValue = "10") int size,
                               Model model, HttpSession session) {
@@ -147,37 +164,37 @@ public String viewOrder(@PathVariable Long id, Model model, HttpSession session)
         if (user == null || user.getRole() != User.Role.ADMIN) {
             return "redirect:/login";
         }
-        
+
         try {
             Customer customer = customerService.findById(id);
             if (customer == null) {
                 model.addAttribute("error", "Không tìm thấy khách hàng với ID: " + id);
                 return "admin/customers/index"; // Hoặc redirect về danh sách
             }
-            
+
             // Lấy danh sách hóa đơn với phân trang
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             Page<Order> ordersPage = orderService.findByCustomerId(id, pageable);
-            
+
             // Tính tổng tiền đã mua và kiểm tra điều kiện VIP
             long totalSpent = customerService.getTotalSpentByCustomer(id);
             boolean firstOrderOver2M = customerService.isFirstOrderOver2M(id);
             boolean canBeVip = (firstOrderOver2M || totalSpent >= 10_000_000);
-            
+
             // Cập nhật số đơn hàng trong customer (ép kiểu từ long sang int)
             customer.setOrderCount((int) ordersPage.getTotalElements());
-            
+
             model.addAttribute("customer", customer);
             model.addAttribute("orders", ordersPage.getContent());
             model.addAttribute("currentPage", page);
             model.addAttribute("totalPages", ordersPage.getTotalPages());
             model.addAttribute("totalElements", ordersPage.getTotalElements());
-            
+
             // Thêm các biến cho VIP và điều kiện
             model.addAttribute("totalSpent", totalSpent);
             model.addAttribute("firstOrderOver2M", firstOrderOver2M);
             model.addAttribute("canBeVip", canBeVip);
-            
+
             return "admin/customers/view";
         } catch (Exception e) {
             e.printStackTrace();

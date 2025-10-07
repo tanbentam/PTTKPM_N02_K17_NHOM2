@@ -37,7 +37,11 @@ public class POSService {
     private final Map<Long, Integer> inventoryCache = new ConcurrentHashMap<>();
 
     // ==================== PHƯƠNG THỨC CHUẨN CHO POS ====================
+ private OrderService orderService;
 
+    // ...existing code...
+
+   
     /**
      * Xử lý đơn hàng POS, cập nhật khách hàng (địa chỉ, ngày sinh, VIP, ...), cập nhật tồn kho, tạo VIP request nếu cần.
      * Sử dụng cho các nghiệp vụ POS hiện đại.
@@ -180,7 +184,9 @@ public class POSService {
         // (Không thay đổi, đã có ở trên)
         return null;
     }
-
+ public List<Order> getAllOrders() {
+        return orderService.getAllOrders();
+    }
     @Transactional
     public Map<String, Object> processOrderAndUpdateInventory(OrderRequest orderRequest, List<POSController.CartItem> cartItems, String username) {
         // ...giữ nguyên code cũ...

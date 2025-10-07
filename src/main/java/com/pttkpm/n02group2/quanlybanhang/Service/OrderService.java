@@ -89,7 +89,13 @@ public class OrderService {
 
     // ==================== HELPER METHODS ====================
     
-    
+    public long countAll() {
+        return orderRepository.count();
+    }
+public double getTotalRevenue() {
+        Double revenue = orderRepository.sumTotalRevenue();
+        return revenue != null ? revenue : 0.0;
+    }
     // Nếu chưa có method này, thêm luôn
     public List<Order> findByCustomerId(Long customerId) {
         return orderRepository.findByCustomerId(customerId);

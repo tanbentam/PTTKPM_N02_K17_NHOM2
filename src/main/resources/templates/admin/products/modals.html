@@ -27,18 +27,18 @@
                                 <div class="mb-3">
                                     <label class="form-label">Danh mục</label>
                                     <select class="form-select" name="category" required>
-    <option value="">Chọn danh mục</option>
-    <option value="electronics">Điện tử</option>
-    <option value="clothing">Thời trang</option>
-    <option value="home">Gia dụng</option>
-    <option value="books">Sách</option>
-    <option value="sports">Thể thao</option>
-    <option value="cosmetics">Mỹ phẩm</option>
-    <option value="toys">Đồ chơi</option>
-    <option value="accessories">Phụ kiện</option>
-    <option value="food">Thực phẩm</option>
-    <option value="furniture">Nội thất</option>
-</select>
+                                        <option value="">Chọn danh mục</option>
+                                        <option value="electronics">Điện tử</option>
+                                        <option value="clothing">Thời trang</option>
+                                        <option value="home">Gia dụng</option>
+                                        <option value="books">Sách</option>
+                                        <option value="sports">Thể thao</option>
+                                        <option value="cosmetics">Mỹ phẩm</option>
+                                        <option value="toys">Đồ chơi</option>
+                                        <option value="accessories">Phụ kiện</option>
+                                        <option value="food">Thực phẩm</option>
+                                        <option value="furniture">Nội thất</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -126,18 +126,18 @@
                                 <div class="mb-3">
                                     <label class="form-label">Danh mục *</label>
                                     <select class="form-select" name="category" required>
-    <option value="">Chọn danh mục</option>
-    <option value="electronics">Điện tử</option>
-    <option value="clothing">Thời trang</option>
-    <option value="home">Gia dụng</option>
-    <option value="books">Sách</option>
-    <option value="sports">Thể thao</option>
-    <option value="cosmetics">Mỹ phẩm</option>
-    <option value="toys">Đồ chơi</option>
-    <option value="accessories">Phụ kiện</option>
-    <option value="food">Thực phẩm</option>
-    <option value="furniture">Nội thất</option>
-</select>
+                                        <option value="">Chọn danh mục</option>
+                                        <option value="electronics">Điện tử</option>
+                                        <option value="clothing">Thời trang</option>
+                                        <option value="home">Gia dụng</option>
+                                        <option value="books">Sách</option>
+                                        <option value="sports">Thể thao</option>
+                                        <option value="cosmetics">Mỹ phẩm</option>
+                                        <option value="toys">Đồ chơi</option>
+                                        <option value="accessories">Phụ kiện</option>
+                                        <option value="food">Thực phẩm</option>
+                                        <option value="furniture">Nội thất</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -185,12 +185,44 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="viewProductContent">
-                    <!-- Nội dung sẽ được load qua AJAX -->
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img id="view-product-image" src="https://via.placeholder.com/300x300" class="img-fluid rounded" alt="Product Image">
+                        </div>
+                        <div class="col-md-8">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th style="width: 150px;">Tên sản phẩm:</th>
+                                    <td id="view-product-name">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Danh mục:</th>
+                                    <td id="view-product-category">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Giá bán:</th>
+                                    <td><span id="view-product-price">0</span> ₫</td>
+                                </tr>
+                                <tr>
+                                    <th>Số lượng:</th>
+                                    <td id="view-product-quantity">0</td>
+                                </tr>
+                                <tr>
+                                    <th>Trạng thái:</th>
+                                    <td><span id="view-product-status" class="status-badge">-</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Mô tả:</th>
+                                    <td id="view-product-description">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-warning" onclick="editProduct()">
+                    <button type="button" class="btn btn-warning" id="view-edit-btn">
                         <i class="fas fa-edit"></i> Chỉnh Sửa
                     </button>
                 </div>
@@ -208,9 +240,66 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="editProductContent">
-                    <!-- Nội dung sẽ được load qua AJAX -->
-                </div>
+                <form th:action="@{/admin/products/update}" method="post" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <input type="hidden" id="edit-id" name="id">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Tên sản phẩm *</label>
+                                    <input type="text" class="form-control" id="edit-name" name="name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Danh mục *</label>
+                                    <select class="form-select" id="edit-category" name="category" required>
+                                        <option value="">Chọn danh mục</option>
+                                        <option value="electronics">Điện tử</option>
+                                        <option value="clothing">Thời trang</option>
+                                        <option value="home">Gia dụng</option>
+                                        <option value="books">Sách</option>
+                                        <option value="sports">Thể thao</option>
+                                        <option value="cosmetics">Mỹ phẩm</option>
+                                        <option value="toys">Đồ chơi</option>
+                                        <option value="accessories">Phụ kiện</option>
+                                        <option value="food">Thực phẩm</option>
+                                        <option value="furniture">Nội thất</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Giá bán *</label>
+                                    <input type="number" class="form-control" id="edit-price" name="price" min="0" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Số lượng *</label>
+                                    <input type="number" class="form-control" id="edit-quantity" name="quantity" min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả</label>
+                            <textarea class="form-control" id="edit-description" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Hình ảnh mới</label>
+                            <input type="file" class="form-control" name="imageFile" accept="image/*">
+                            <div class="form-text">Để trống nếu không muốn thay đổi ảnh</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save"></i> Cập Nhật
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -269,12 +358,12 @@
                         <strong>Cảnh báo:</strong> Hành động này không thể hoàn tác!
                     </div>
                     <p>Bạn có chắc chắn muốn xóa sản phẩm:</p>
-                    <p class="fw-bold text-danger" id="deleteProductName"></p>
+                    <p class="fw-bold text-danger" id="delete-product-name"></p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <form id="deleteForm" th:action="@{/admin/products/delete}" method="post" style="display: inline;">
-                        <input type="hidden" id="deleteProductId" name="id">
+                    <form th:action="@{/admin/products/delete}" method="post" style="display: inline;">
+                        <input type="hidden" id="delete-product-id" name="id">
                         <button type="submit" class="btn btn-danger">
                             <i class="fas fa-trash"></i> Xóa Vĩnh Viễn
                         </button>
@@ -320,66 +409,5 @@
             </div>
         </div>
     </div>
-
-    <!-- JavaScript cho các modal -->
-    <script>
-        // Hàm load chi tiết sản phẩm
-        function viewProduct(productId) {
-            fetch(`/admin/products/view/${productId}`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('viewProductContent').innerHTML = html;
-                    new bootstrap.Modal(document.getElementById('viewProductModal')).show();
-                })
-                .catch(error => {
-                    console.error('Error loading product details:', error);
-                    document.getElementById('viewProductContent').innerHTML = 
-                        '<div class="alert alert-danger">Có lỗi xảy ra khi tải thông tin sản phẩm!</div>';
-                });
-        }
-
-        // Hàm load form chỉnh sửa
-        function editProduct(productId) {
-            fetch(`/admin/products/edit/${productId}`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('editProductContent').innerHTML = html;
-                    bootstrap.Modal.getInstance(document.getElementById('viewProductModal')).hide();
-                    new bootstrap.Modal(document.getElementById('editProductModal')).show();
-                })
-                .catch(error => {
-                    console.error('Error loading edit form:', error);
-                    document.getElementById('editProductContent').innerHTML = 
-                        '<div class="alert alert-danger">Có lỗi xảy ra khi tải form chỉnh sửa!</div>';
-                });
-        }
-
-        // Hàm hiển thị modal xóa
-        function deleteProduct(productId, productName) {
-            document.getElementById('deleteProductId').value = productId;
-            document.getElementById('deleteProductName').textContent = productName;
-            new bootstrap.Modal(document.getElementById('deleteModal')).show();
-        }
-
-        // Hàm cập nhật kho
-        function updateStock(productId, productName, currentStock) {
-            document.getElementById('stockProductId').value = productId;
-            document.getElementById('stockProductName').textContent = productName;
-            document.getElementById('currentStock').value = currentStock;
-            document.getElementById('newStock').value = currentStock;
-            new bootstrap.Modal(document.getElementById('updateStockModal')).show();
-        }
-
-        // Hàm bulk update stock
-        function bulkUpdateStock(selectedIds) {
-            if (selectedIds.length === 0) {
-                alert('Vui lòng chọn ít nhất một sản phẩm!');
-                return;
-            }
-            document.getElementById('bulkStockProductIds').value = selectedIds.join(',');
-            document.getElementById('bulkCount').textContent = selectedIds.length;
-            new bootstrap.Modal(document.getElementById('bulkStockModal')).show();
-        }
-    </script>
 </body>
 </html>

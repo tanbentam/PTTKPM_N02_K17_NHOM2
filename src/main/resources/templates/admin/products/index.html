@@ -862,13 +862,13 @@
         
         // Helper function to populate edit form
         function populateEditForm(product) {
-            document.getElementById('edit-id').value = product.id;
-            document.getElementById('edit-name').value = product.name;
-            document.getElementById('edit-category').value = product.category;
-            document.getElementById('edit-price').value = product.price;
-            document.getElementById('edit-quantity').value = product.quantity;
-            document.getElementById('edit-description').value = product.description || '';
-        }
+    document.getElementById('edit-id').value = product.id;
+    document.getElementById('edit-name').value = product.name;
+    document.getElementById('edit-category').value = product.category; // LỖI Ở ĐÂY
+    document.getElementById('edit-price').value = product.price;
+    document.getElementById('edit-quantity').value = product.quantity;
+    document.getElementById('edit-description').value = product.description || '';
+}
         
         // Bulk actions
         const selectAllCheckbox = document.getElementById('selectAll');

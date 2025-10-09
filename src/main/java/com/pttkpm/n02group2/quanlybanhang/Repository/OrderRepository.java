@@ -29,7 +29,9 @@ void deleteByCustomerId(Long customerId);
     // Tìm đơn hàng theo trạng thái
     List<Order> findByStatus(Order.OrderStatus status);
     
-    
+    @Query("SELECT SUM(o.finalAmount) FROM Order o WHERE o.status = 'COMPLETED'")
+    Double sumTotalRevenue();
+
     // Tìm đơn hàng theo ID khách hàng, sắp xếp theo ngày tạo giảm dần (cho POSService)
     List<Order> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
     
@@ -169,7 +171,12 @@ void deleteByCustomerId(Long customerId);
     
     // Kiểm tra khách hàng có đơn hàng nào chưa
     boolean existsByCustomer(Customer customer);
-    
+    // ...existing code...
+
+// Lấy tất cả đơn hàng, sắp xếp theo ngày tạo giảm dần, có phân trang
+Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+// ...existing code...
     // ==================== ADVANCED QUERIES ====================
     
     // Đơn hàng có giá trị cao nhất

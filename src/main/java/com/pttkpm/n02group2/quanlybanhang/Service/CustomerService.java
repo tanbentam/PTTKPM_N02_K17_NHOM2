@@ -157,7 +157,9 @@ public class CustomerService {
             return List.of(); // Trả về danh sách trống nếu lỗi
         }
     }
-
+public long countAll() {
+        return customerRepository.count();
+    }
     public void deleteCustomerAndOrders(Long customerId) {
         orderRepository.deleteByCustomerId(customerId);
         customerRepository.deleteById(customerId);

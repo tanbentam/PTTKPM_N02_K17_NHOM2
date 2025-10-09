@@ -2,15 +2,17 @@ package com.pttkpm.n02group2.quanlybanhang.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pttkpm.n02group2.quanlybanhang.Model.*;
+import com.pttkpm.n02group2.quanlybanhang.Repository.OrderRepository;
 import com.pttkpm.n02group2.quanlybanhang.Service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
+import org.springframework.data.domain.Page;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDate;
@@ -26,7 +28,8 @@ import java.util.Optional;
 @RequestMapping("/user/pos")
 @SessionAttributes({"cart", "selectedCustomer"})
 public class POSController {
-
+@Autowired
+private OrderRepository orderRepository;
     @Autowired
     private ProductService productService;
 
@@ -936,46 +939,85 @@ public Map<String, Object> getReceiptData(@PathVariable Long orderId) {
 
     // ==================== ORDER HISTORY ====================
 
-    @GetMapping("/history")
+@GetMapping("/history")
 public String userOrderHistory(
         @RequestParam(required = false) String date,
         @RequestParam(required = false) String customerName,
+        @RequestParam(required = false) String cashier,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
         Model model,
         HttpSession session) {
     String username = (String) session.getAttribute("username");
     if (username == null) {
         return "redirect:/login";
     }
-    
+
     try {
-        List<Order> orders = posService.getOrdersByUsername(username);
+        boolean hasFilter = (date != null && !date.isEmpty())
+                || (customerName != null && !customerName.trim().isEmpty())
+                || (cashier != null && !cashier.trim().isEmpty());
 
-        // Lọc theo ngày nếu được cung cấp
-        if (date != null && !date.isEmpty()) {
-            orders = orders.stream()
-                .filter(order -> {
-                    String orderDate = order.getCreatedAt().toLocalDate().toString();
-                    return orderDate.equals(date);
-                })
-                .toList();
+        List<Order> filteredOrders;
+        int totalElements;
+        int totalPages;
+        List<Order> pageOrders;
+
+        if (!hasFilter) {
+            // Không filter: phân trang trực tiếp từ DB
+            Page<Order> ordersPage = orderRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
+            filteredOrders = ordersPage.getContent();
+            totalElements = (int) ordersPage.getTotalElements();
+            totalPages = ordersPage.getTotalPages();
+            pageOrders = filteredOrders;
+        } else {
+            // Có filter: lấy toàn bộ, lọc rồi phân trang thủ công
+            List<Order> allOrders = orderRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, Integer.MAX_VALUE)).getContent();
+            filteredOrders = allOrders;
+            if (date != null && !date.isEmpty()) {
+                filteredOrders = filteredOrders.stream()
+                        .filter(order -> order.getCreatedAt() != null &&
+                                order.getCreatedAt().toLocalDate().toString().equals(date))
+                        .toList();
+            }
+            if (cashier != null && !cashier.trim().isEmpty()) {
+                String searchCashier = cashier.trim().toLowerCase();
+                filteredOrders = filteredOrders.stream()
+                        .filter(order -> order.getCreatedBy() != null &&
+                                order.getCreatedBy().toLowerCase().contains(searchCashier))
+                        .toList();
+            }
+            if (customerName != null && !customerName.trim().isEmpty()) {
+                String searchName = customerName.trim().toLowerCase();
+                filteredOrders = filteredOrders.stream()
+                        .filter(order -> order.getCustomer() != null &&
+                                order.getCustomer().getName() != null &&
+                                order.getCustomer().getName().trim().toLowerCase().contains(searchName))
+                        .toList();
+            }
+            totalElements = filteredOrders.size();
+            totalPages = (int) Math.ceil((double) totalElements / size);
+            if (page >= totalPages && totalPages > 0) page = totalPages - 1;
+            if (page < 0) page = 0;
+            int startIndex = page * size;
+            int endIndex = Math.min(startIndex + size, totalElements);
+            pageOrders = (startIndex < totalElements) ? filteredOrders.subList(startIndex, endIndex) : new ArrayList<>();
         }
 
-        // Lọc theo tên khách hàng nếu được cung cấp
-        if (customerName != null && !customerName.trim().isEmpty()) {
-            String searchName = customerName.trim().toLowerCase();
-            orders = orders.stream()
-                .filter(order -> {
-                    if (order.getCustomer() == null || order.getCustomer().getName() == null) return false;
-                    String orderCustomerName = order.getCustomer().getName().trim().toLowerCase();
-                    return orderCustomerName.contains(searchName);
-                })
-                .toList();
-        }
-
-        model.addAttribute("orders", orders);
+        model.addAttribute("orders", pageOrders);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalElements", totalElements);
+        model.addAttribute("pageSize", size);
         model.addAttribute("staffName", username);
+
+        // Giữ lại parameters
+        model.addAttribute("date", date);
+        model.addAttribute("customerName", customerName);
+        model.addAttribute("cashier", cashier);
+
         return "user/pos/history";
-        
+
     } catch (Exception e) {
         model.addAttribute("error", "Có lỗi xảy ra khi tải lịch sử đơn hàng: " + e.getMessage());
         return "user/pos/history";

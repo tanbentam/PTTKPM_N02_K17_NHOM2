@@ -7,15 +7,21 @@
     <style>
         .search-bar { margin-bottom: 24px; }
         .table th, .table td { vertical-align: middle; }
-        .order-info { margin-top: 32px; }
         .btn-back-pos {
             position: absolute;
             top: 24px;
             left: 24px;
             z-index: 10;
         }
+        .pagination-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
         @media (max-width: 768px) {
             .btn-back-pos { top: 8px; left: 8px; }
+            .pagination-info { flex-direction: column; gap: 10px; }
         }
     </style>
 </head>
@@ -28,28 +34,53 @@
     
     <!-- Search Bar -->
     <form class="row search-bar" method="get" th:action="@{/user/pos/history}">
-        <div class="col-md-3 mb-2 mb-md-0">
-            <input type="date" class="form-control" name="date" th:value="${param.date}">
+        <div class="col-md-2 mb-2 mb-md-0">
+            <input type="date" class="form-control" name="date" th:value="${date}">
         </div>
-        <div class="col-md-5 mb-2 mb-md-0">
-            <input type="text" class="form-control" name="customerName" placeholder="Tìm theo tên khách hàng..." th:value="${param.customerName}">
+        <div class="col-md-3 mb-2 mb-md-0">
+            <input type="text" class="form-control" name="customerName" placeholder="Tìm theo tên khách hàng..." th:value="${customerName}">
+        </div>
+        <div class="col-md-2 mb-2 mb-md-0">
+            <input type="text" class="form-control" name="cashier" placeholder="Thu ngân..." th:value="${cashier}">
+        </div>
+        <div class="col-md-2 mb-2 mb-md-0">
+            <select class="form-control" name="size">
+                <option value="5" th:selected="${pageSize == 5}">5/trang</option>
+                <option value="10" th:selected="${pageSize == 10}">10/trang</option>
+                <option value="20" th:selected="${pageSize == 20}">20/trang</option>
+                <option value="50" th:selected="${pageSize == 50}">50/trang</option>
+            </select>
         </div>
         <div class="col-md-2 mb-2 mb-md-0">
             <button type="submit" class="btn btn-primary w-100">
                 <i class="fas fa-search"></i> Tìm kiếm
             </button>
         </div>
-        <div class="col-md-2">
-            <a href="/user/pos/history" class="btn btn-secondary w-100">Xem tất cả</a>
+        <div class="col-md-1">
+            <a href="/user/pos/history" class="btn btn-secondary w-100">Reset</a>
         </div>
     </form>
+
+    <!-- Pagination Info -->
+    <div class="pagination-info" th:if="${totalElements != null and totalElements > 0}">
+        <div class="info-text">
+            <span th:text="'Hiển thị ' + (${currentPage} * ${pageSize} + 1) + ' - ' + 
+                         (${currentPage} * ${pageSize} + ${orders.size()}) + 
+                         ' trong tổng số ' + ${totalElements} + ' đơn hàng'"></span>
+        </div>
+        <div class="page-size-info">
+            <span class="badge bg-info" th:text="${pageSize} + ' đơn/trang'"></span>
+        </div>
+    </div>
     
     <div th:if="${orders != null and !orders.isEmpty()}">
         <table class="table table-hover table-bordered">
             <thead class="table-dark">
                 <tr>
+                    <th>STT</th>
                     <th>Mã đơn</th>
                     <th>Ngày tạo</th>
+                    <th>Thu ngân</th>
                     <th>Khách hàng</th>
                     <th>Thành tiền</th>
                     <th>Trạng thái</th>
@@ -57,26 +88,67 @@
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="order : ${orders}">
-                    <td th:text="${order.orderNumber}"></td>
-                    <td th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
-                    <td th:text="${order.customer != null ? order.customer.name : 'Khách lẻ'}"></td>
-                    <td th:text="${#numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ'}"></td>
+                <tr th:each="order, iterStat : ${orders}">
+                    <td th:text="${currentPage * pageSize + iterStat.index + 1}"></td>
+                    <td th:text="${order.orderNumber != null ? order.orderNumber : '---'}"></td>
+                    <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm') : '---'}"></td>
+                    <td th:text="${order.createdBy != null ? order.createdBy : 'Admin'}"></td>
+                    <td th:text="${order.customer != null && order.customer.name != null ? order.customer.name : 'Khách lẻ'}"></td>
+                    <td th:text="${order.finalAmount != null ? #numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></td>
                     <td>
-                        <span th:text="${order.status}" th:classappend="${order.status == 'COMPLETED'} ? 'text-success' : 'text-warning'"></span>
+                        <span th:text="${order.status != null ? order.status : '---'}"
+                              th:classappend="${order.status == 'COMPLETED'} ? 'text-success' : 'text-warning'"></span>
                     </td>
                     <td>
                         <a th:href="@{'/user/pos/historyoder?id=' + ${order.id}}" class="btn btn-sm btn-info">
-                            <i class="fas fa-file-invoice"></i> Xem hóa đơn
+                            <i class="fas fa-file-invoice"></i> Xem
                         </a>
                     </td>
                 </tr>
             </tbody>
         </table>
+
+        <!-- Pagination Navigation -->
+        <nav aria-label="Page navigation" th:if="${totalPages > 1}">
+            <ul class="pagination justify-content-center">
+                <!-- Previous page -->
+                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                    <a class="page-link" 
+                       th:href="@{/user/pos/history(page=${currentPage - 1}, size=${pageSize}, date=${date}, customerName=${customerName}, cashier=${cashier})}"
+                       th:if="${currentPage > 0}">
+                        <i class="fas fa-chevron-left"></i> Trước
+                    </a>
+                    <span class="page-link" th:if="${currentPage == 0}">
+                        <i class="fas fa-chevron-left"></i> Trước
+                    </span>
+                </li>
+
+                <!-- Page numbers -->
+                <li class="page-item" 
+                    th:each="pageNum : ${#numbers.sequence(0, totalPages - 1)}"
+                    th:classappend="${pageNum == currentPage} ? 'active'">
+                    <a class="page-link" 
+                       th:href="@{/user/pos/history(page=${pageNum}, size=${pageSize}, date=${date}, customerName=${customerName}, cashier=${cashier})}"
+                       th:text="${pageNum + 1}"></a>
+                </li>
+
+                <!-- Next page -->
+                <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                    <a class="page-link" 
+                       th:href="@{/user/pos/history(page=${currentPage + 1}, size=${pageSize}, date=${date}, customerName=${customerName}, cashier=${cashier})}"
+                       th:if="${currentPage < totalPages - 1}">
+                        Sau <i class="fas fa-chevron-right"></i>
+                    </a>
+                    <span class="page-link" th:if="${currentPage == totalPages - 1}">
+                        Sau <i class="fas fa-chevron-right"></i>
+                    </span>
+                </li>
+            </ul>
+        </nav>
     </div>
     
-    <div th:if="${orders == null or orders.isEmpty()}" class="alert alert-info mt-4">
-        Bạn chưa có đơn hàng nào.
+    <div th:if="${orders == null or orders.isEmpty()}" class="alert alert-info mt-4 text-center">
+        <i class="fas fa-info-circle"></i> Không tìm thấy đơn hàng nào phù hợp với tiêu chí tìm kiếm.
     </div>
 </div>
 </body>

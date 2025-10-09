@@ -103,6 +103,11 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+
+     public long countAll() {
+        return productRepository.count();
+    }
+    
     /**
      * Lấy sản phẩm theo ID.
      */

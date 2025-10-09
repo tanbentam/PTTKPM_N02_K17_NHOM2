@@ -35,6 +35,9 @@ public class POSController {
 
     @Autowired
     private POSService posService;
+    
+    @Autowired
+    private PromotionService promotionService;
 
     // ==================== POS MAIN INTERFACE ====================
 
@@ -1157,5 +1160,92 @@ public String viewOrderDetailLegacy(@RequestParam("id") Long id, Model model, Ht
 
         public Customer getCustomer() { return customer; }
         public void setCustomer(Customer customer) { this.customer = customer; }
+    }
+    
+    // ==================== PROMOTION APIs ====================
+    
+    /**
+     * API: Lấy thông tin sản phẩm kèm khuyến mại
+     */
+    @GetMapping("/api/products/{id}/with-promotion")
+    @ResponseBody
+    public ResponseEntity<?> getProductWithPromotion(@PathVariable Long id) {
+        try {
+            Optional<Product> productOpt = productService.getProductById(id);
+            if (productOpt.isPresent()) {
+                Product product = productOpt.get();
+                Map<String, Object> discountInfo = promotionService.getDiscountInfo(product);
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("product", product);
+                response.put("discountInfo", discountInfo);
+                
+                return ResponseEntity.ok(response);
+            }
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+    
+    /**
+     * API: Lấy danh sách khuyến mại đang hoạt động
+     */
+    @GetMapping("/api/active-promotions")
+    @ResponseBody
+    public ResponseEntity<?> getActivePromotions() {
+        try {
+            List<Promotion> promotions = promotionService.getActivePromotions();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("promotions", promotions);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+    
+    /**
+     * API: Lấy tất cả sản phẩm với thông tin khuyến mại
+     */
+    @GetMapping("/api/products-with-promotions")
+    @ResponseBody
+    public ResponseEntity<?> getAllProductsWithPromotions() {
+        try {
+            List<Product> products = productService.getAllProducts();
+            List<Map<String, Object>> productsWithPromotions = new ArrayList<>();
+            
+            for (Product product : products) {
+                Map<String, Object> productData = new HashMap<>();
+                productData.put("id", product.getId());
+                productData.put("name", product.getName());
+                productData.put("category", product.getCategory());
+                productData.put("quantity", product.getQuantity());
+                
+                // Lấy thông tin khuyến mại
+                Map<String, Object> discountInfo = promotionService.getDiscountInfo(product);
+                productData.put("originalPrice", discountInfo.get("originalPrice"));
+                productData.put("discountPercent", discountInfo.get("discountPercent"));
+                productData.put("discountedPrice", discountInfo.get("discountedPrice"));
+                productData.put("hasDiscount", discountInfo.get("hasDiscount"));
+                productData.put("discountSource", discountInfo.get("discountSource"));
+                
+                productsWithPromotions.add(productData);
+            }
+            
+            return ResponseEntity.ok(productsWithPromotions);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
     }
 }

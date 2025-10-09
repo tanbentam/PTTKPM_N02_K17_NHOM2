@@ -135,6 +135,48 @@
             background: #e9ecef;
             transform: translateY(-2px);
         }
+        
+        /* Promotion Styles */
+        .promotion-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .product-card .original-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 0.85em;
+        }
+        .product-card .discount-price {
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .product-card .discount-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #dc3545;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4);
+            z-index: 10;
+        }
+        .cart-item .discount-info {
+            color: #28a745;
+            font-size: 0.8em;
+            font-style: italic;
+        }
+        .total-discount {
+            color: #dc3545;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -190,6 +232,19 @@
         <div class="row">
             <!-- Cột trái: Danh sách sản phẩm -->
             <div class="col-md-8">
+                <!-- Promotion Banner -->
+                <div id="promotionBanner" class="promotion-banner" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0"><i class="fas fa-gift"></i> <strong>Chương trình khuyến mại đang áp dụng</strong></h6>
+                            <small id="promotionInfo"></small>
+                        </div>
+                        <button class="btn btn-light btn-sm" onclick="showPromotionDetails()">
+                            <i class="fas fa-info-circle"></i> Chi tiết
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- Tìm kiếm sản phẩm -->
                 <div class="search-box">
                     <div class="input-group mb-3">
@@ -273,6 +328,10 @@
                     <div class="d-flex justify-content-between mb-2">
                         <span>Tạm tính:</span>
                         <strong id="subtotal">0 VNĐ</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 total-discount">
+                        <span>Giảm giá KM:</span>
+                        <strong id="promotionDiscount">0 VNĐ</strong>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Giảm giá VIP:</span>
@@ -647,9 +706,15 @@
             currentProductForQuantity = null;
         }
 
-        // Add product to cart
+        // Add product to cart (with promotion support)
         function addToCart(product, quantity) {
             const existingItem = cart.find(item => item.id === product.id);
+            
+            // Get product card to extract promotion info
+            const productCard = document.querySelector(`[data-product-id="${product.id}"]`);
+            const discountedPrice = productCard ? parseFloat(productCard.getAttribute('data-product-price')) : product.price;
+            const originalPrice = productCard ? parseFloat(productCard.getAttribute('data-product-original-price')) : product.price;
+            const discountPercent = productCard ? parseFloat(productCard.getAttribute('data-product-discount') || 0) : 0;
             
             if (existingItem) {
                 const newQuantity = existingItem.quantity + quantity;
@@ -663,9 +728,11 @@
                 cart.push({
                     id: product.id,
                     name: product.name,
-                    price: product.price,
+                    price: discountedPrice,
+                    originalPrice: originalPrice,
+                    discountPercent: discountPercent,
                     quantity: quantity,
-                    total: product.price * quantity,
+                    total: discountedPrice * quantity,
                     availableQuantity: product.availableQuantity
                 });
             }
@@ -721,6 +788,7 @@
             const cartItemCount = document.getElementById('cartItemCount');
             const totalItems = document.getElementById('totalItems');
             const subtotal = document.getElementById('subtotal');
+            const promotionDiscount = document.getElementById('promotionDiscount');
             const vipDiscount = document.getElementById('vipDiscount');
             const grandTotal = document.getElementById('grandTotal');
             const paymentBtn = document.getElementById('paymentBtn');
@@ -740,12 +808,23 @@
                     </div>
                 `;
             } else {
-                cartItemsContainer.innerHTML = cart.map(item => `
+                cartItemsContainer.innerHTML = cart.map(item => {
+                    const hasDiscount = item.discountPercent > 0;
+                    return `
                     <div class="cart-item">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="flex-grow-1">
                                 <h6 class="mb-1">${item.name}</h6>
-                                <small class="text-muted">${formatCurrency(item.price)} x ${item.quantity}</small>
+                                ${hasDiscount ? `
+                                    <small class="discount-info">
+                                        <i class="fas fa-tag"></i> Giảm ${item.discountPercent.toFixed(0)}%
+                                    </small>
+                                    <br>
+                                ` : ''}
+                                <small class="text-muted">
+                                    ${hasDiscount ? `<span class="text-decoration-line-through">${formatCurrency(item.originalPrice)}</span> ` : ''}
+                                    ${formatCurrency(item.price)} x ${item.quantity}
+                                </small>
                             </div>
                             <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart('${item.id}')">
                                 <i class="fas fa-trash"></i>
@@ -760,22 +839,26 @@
                             <strong class="text-success">${formatCurrency(item.total)}</strong>
                         </div>
                     </div>
-                `).join('');
+                `;}).join('');
             }
             
             // Calculate totals
+            const originalSubtotal = cart.reduce((sum, item) => sum + (item.originalPrice || item.price) * item.quantity, 0);
             const subtotalAmount = cart.reduce((sum, item) => sum + item.total, 0);
+            const promotionDiscountAmount = originalSubtotal - subtotalAmount;
+            
             let vipDiscountAmount = 0;
             let finalAmount = subtotalAmount;
             
-            // Apply VIP discount if customer is VIP
+            // Apply VIP discount if customer is VIP (on discounted price)
             if (selectedCustomer && selectedCustomer.vip && selectedCustomer.vipDiscountPercent > 0) {
                 vipDiscountAmount = subtotalAmount * (selectedCustomer.vipDiscountPercent / 100);
                 finalAmount = subtotalAmount - vipDiscountAmount;
             }
             
             // Update display
-            subtotal.textContent = formatCurrency(subtotalAmount);
+            subtotal.textContent = formatCurrency(originalSubtotal);
+            promotionDiscount.textContent = promotionDiscountAmount > 0 ? '-' + formatCurrency(promotionDiscountAmount) : '0 VNĐ';
             vipDiscount.textContent = vipDiscountAmount > 0 ? '-' + formatCurrency(vipDiscountAmount) : '0 VNĐ';
             grandTotal.textContent = formatCurrency(finalAmount);
             
@@ -1340,6 +1423,187 @@ if (selectedCustomer && selectedCustomer.dateOfBirth) {
                 e.preventDefault();
                 processPayment();
             }
+        });
+        
+        // ==================== PROMOTION FUNCTIONS ====================
+        
+        let activePromotions = [];
+        
+        // Load active promotions on page load
+        function loadActivePromotions() {
+            fetch('/user/pos/api/active-promotions')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.promotions && data.promotions.length > 0) {
+                        activePromotions = data.promotions;
+                        showPromotionBanner(data.promotions);
+                    }
+                })
+                .catch(error => console.error('Error loading promotions:', error));
+        }
+        
+        // Show promotion banner
+        function showPromotionBanner(promotions) {
+            const banner = document.getElementById('promotionBanner');
+            const info = document.getElementById('promotionInfo');
+            
+            if (promotions.length > 0) {
+                const promotionNames = promotions.map(p => p.name).join(', ');
+                info.textContent = promotionNames;
+                banner.style.display = 'block';
+            }
+        }
+        
+        // Show promotion details modal
+        function showPromotionDetails() {
+            let html = '';
+            
+            if (activePromotions.length === 0) {
+                html = '<p class="text-muted">Không có chương trình khuyến mại nào đang hoạt động</p>';
+            } else {
+                activePromotions.forEach(promo => {
+                    const startDate = new Date(promo.startDate).toLocaleDateString('vi-VN');
+                    const endDate = new Date(promo.endDate).toLocaleDateString('vi-VN');
+                    
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="fas fa-gift text-danger"></i> ${promo.name}</h6>
+                                <p class="card-text text-muted">${promo.description || ''}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    ${startDate} - ${endDate}
+                                </small>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Giảm giá theo danh mục:</strong>
+                                        <ul class="mt-2">
+                                            ${(promo.categoryDiscounts || []).map(cd => 
+                                                `<li>${cd.category}: <span class="text-danger fw-bold">${cd.discountPercent}%</span></li>`
+                                            ).join('')}
+                                        </ul>
+                                        ${(promo.categoryDiscounts || []).length === 0 ? '<p class="text-muted small">Không có</p>' : ''}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Giảm giá sản phẩm:</strong>
+                                        <ul class="mt-2">
+                                            ${(promo.productDiscounts || []).map(pd => 
+                                                `<li>${pd.product.name}: <span class="text-danger fw-bold">${pd.discountPercent}%</span></li>`
+                                            ).join('')}
+                                        </ul>
+                                        ${(promo.productDiscounts || []).length === 0 ? '<p class="text-muted small">Không có</p>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Create modal if not exists
+            let modal = document.getElementById('promotionDetailsModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.id = 'promotionDetailsModal';
+                modal.setAttribute('tabindex', '-1');
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title"><i class="fas fa-gift"></i> Chi tiết chương trình khuyến mại</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body" id="promotionDetailsContent">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('promotionDetailsContent').innerHTML = html;
+            new bootstrap.Modal(modal).show();
+        }
+        
+        // Load products with promotions
+        function loadProductsWithPromotions() {
+            fetch('/user/pos/api/products-with-promotions')
+                .then(response => response.json())
+                .then(products => {
+                    renderProductsWithPromotions(products);
+                })
+                .catch(error => {
+                    console.error('Error loading products with promotions:', error);
+                    // Fallback to normal product loading
+                    loadAllProducts();
+                });
+        }
+        
+        // Render products with promotion info
+        function renderProductsWithPromotions(products) {
+            const productGrid = document.querySelector('#productGrid .row');
+            productGrid.innerHTML = '';
+            
+            if (products.length === 0) {
+                document.getElementById('noProductsFound').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('noProductsFound').style.display = 'none';
+            
+            products.forEach(product => {
+                const outOfStock = product.quantity <= 0;
+                const hasDiscount = product.hasDiscount;
+                const discountPercent = product.discountPercent || 0;
+                const originalPrice = product.originalPrice;
+                const discountedPrice = product.discountedPrice;
+                
+                const productCard = `
+                    <div class="col-md-4">
+                        <div class="card product-card ${outOfStock ? 'out-of-stock' : ''}" 
+                             data-product-id="${product.id}"
+                             data-product-name="${product.name}"
+                             data-product-price="${discountedPrice}"
+                             data-product-original-price="${originalPrice}"
+                             data-product-discount="${discountPercent}"
+                             data-product-quantity="${product.quantity}"
+                             onclick="selectProduct(this)">
+                            ${hasDiscount ? `<div class="discount-badge">-${discountPercent.toFixed(0)}%</div>` : ''}
+                            <div class="card-body text-center">
+                                <i class="fas fa-box fa-2x text-primary mb-2"></i>
+                                <h6 class="card-title">${product.name}</h6>
+                                <p class="card-text">
+                                    <small class="text-muted">${product.category || ''}</small>
+                                </p>
+                                <div class="price-section mb-2">
+                                    ${hasDiscount ? `
+                                        <div class="original-price">${formatCurrency(originalPrice)}</div>
+                                        <div class="discount-price">${formatCurrency(discountedPrice)}</div>
+                                        <small class="text-success"><i class="fas fa-tag"></i> ${product.discountSource}</small>
+                                    ` : `
+                                        <div class="discount-price">${formatCurrency(originalPrice)}</div>
+                                    `}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-cubes"></i> Tồn: ${product.quantity}
+                                </small>
+                                ${outOfStock ? '<div class="badge bg-danger mt-2">Hết hàng</div>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                productGrid.innerHTML += productCard;
+            });
+        }
+        
+        // Override the original DOMContentLoaded to include promotions
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCategoriesFromDB();
+            loadActivePromotions();
+            loadProductsWithPromotions();  // Replace loadAllProducts()
+            updateCartDisplay();
         });
     </script>
 </body>

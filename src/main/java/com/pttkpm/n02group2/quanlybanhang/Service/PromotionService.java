@@ -212,4 +212,22 @@ public class PromotionService {
             .sorted()
             .toList();
     }
+
+    // Helper method để lấy giá trị discount cho category
+    public Double getCategoryDiscount(Promotion promotion, String category) {
+        return promotion.getCategoryDiscounts().stream()
+            .filter(cd -> cd.getCategory().equals(category))
+            .map(PromotionCategory::getDiscountPercent)
+            .findFirst()
+            .orElse(null);
+    }
+    
+    // Helper method để lấy giá trị discount cho product
+    public Double getProductDiscount(Promotion promotion, Long productId) {
+        return promotion.getProductDiscounts().stream()
+            .filter(pd -> pd.getProduct().getId().equals(productId))
+            .map(PromotionProduct::getDiscountPercent)
+            .findFirst()
+            .orElse(null);
+    }
 }

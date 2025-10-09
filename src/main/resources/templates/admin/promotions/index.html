@@ -232,6 +232,12 @@
                 item.style.display = text.includes(searchTerm) ? '' : 'none';
             });
         });
+
+        // Edit promotion function
+    function editPromotion(id) {
+        // Redirect to view page which contains edit modal
+        window.location.href = '/admin/promotions/' + id;
+    }
     </script>
 </body>
 </html>

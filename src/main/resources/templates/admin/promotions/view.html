@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết Chương trình Khuyến mại</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-2 d-md-block bg-light sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/dashboard">
+                                <i class="bi bi-house-door"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/products">
+                                <i class="bi bi-box"></i> Sản phẩm
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/customers">
+                                <i class="bi bi-people"></i> Khách hàng
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/admin/promotions">
+                                <i class="bi bi-percent"></i> Khuyến mại
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Chi tiết Chương trình Khuyến mại</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button class="btn btn-outline-warning me-2" onclick="editPromotion()">
+                            <i class="bi bi-pencil"></i> Chỉnh sửa
+                        </button>
+                        <a href="/admin/promotions" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Alert messages -->
+                <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${success}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Promotion Details -->
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0" th:text="${promotion.name}"></h5>
+                                <span class="badge" 
+                                      th:classappend="${promotion.active and promotion.validNow} ? 'bg-success' : (${promotion.active} ? 'bg-warning' : 'bg-secondary')"
+                                      th:text="${promotion.active and promotion.validNow} ? 'Đang áp dụng' : (${promotion.active} ? 'Chưa bắt đầu' : 'Đã kết thúc')">
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text" th:text="${promotion.description}"></p>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <strong>Ngày bắt đầu:</strong>
+                                        <span th:text="${#temporals.format(promotion.startDate, 'dd/MM/yyyy')}"></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Ngày kết thúc:</strong>
+                                        <span th:text="${#temporals.format(promotion.endDate, 'dd/MM/yyyy')}"></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <strong>Trạng thái:</strong>
+                                        <span th:text="${promotion.active} ? 'Kích hoạt' : 'Tạm dừng'"></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Ngày tạo:</strong>
+                                        <span th:text="${#temporals.format(promotion.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category Discounts -->
+                        <div class="card mt-4" th:if="${!promotion.categoryDiscounts.empty}">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-tags"></i> Giảm giá theo danh mục
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Danh mục</th>
+                                                <th>Phần trăm giảm giá</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="categoryDiscount : ${promotion.categoryDiscounts}">
+                                                <td th:text="${categoryDiscount.category}"></td>
+                                                <td>
+                                                    <span class="badge bg-primary" th:text="${categoryDiscount.discountPercent} + '%'"></span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Discounts -->
+                        <div class="card mt-4" th:if="${!promotion.productDiscounts.empty}">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-box"></i> Giảm giá theo sản phẩm
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Sản phẩm</th>
+                                                <th>Danh mục</th>
+                                                <th>Phần trăm giảm giá</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="productDiscount : ${promotion.productDiscounts}">
+                                                <td th:text="${productDiscount.product.name}"></td>
+                                                <td>
+                                                    <span class="badge bg-secondary" th:text="${productDiscount.product.category}"></span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-primary" th:text="${productDiscount.discountPercent} + '%'"></span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistics sidebar -->
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Thống kê</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Tổng danh mục:</span>
+                                    <strong th:text="${promotion.categoryDiscounts.size()}"></strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Tổng sản phẩm:</span>
+                                    <strong th:text="${promotion.productDiscounts.size()}"></strong>
+                                </div>
+                                <hr>
+                                <div class="text-center">
+                                    <form th:action="@{/admin/promotions/{id}/delete(id=${promotion.id})}" 
+                                          method="post" 
+                                          onsubmit="return confirm('Bạn có chắc muốn xóa chương trình này?')">
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            <i class="bi bi-trash"></i> Xóa chương trình
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Edit Promotion Modal -->
+    <div class="modal fade" id="editPromotionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form th:action="@{/admin/promotions/{id}(id=${promotion.id})}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Chỉnh sửa chương trình khuyến mại</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tên chương trình *</label>
+                            <input type="text" name="name" class="form-control" th:value="${promotion.name}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả</label>
+                            <textarea name="description" class="form-control" rows="3" th:text="${promotion.description}"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ngày bắt đầu *</label>
+                                <input type="date" name="startDate" class="form-control" th:value="${promotion.startDate}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ngày kết thúc *</label>
+                                <input type="date" name="endDate" class="form-control" th:value="${promotion.endDate}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="active" id="editActive" th:checked="${promotion.active}">
+                                <label class="form-check-label" for="editActive">
+                                    Kích hoạt
+                                </label>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6>Giảm giá theo danh mục</h6>
+                        <div id="editCategoryDiscounts">
+                            <div th:each="category : ${categories}" class="row mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label" th:text="${category}"></label>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <input type="number" 
+                                               th:name="'categoryDiscount_' + ${category}"
+                                               th:value="${promotionService.getCategoryDiscount(promotion, category)}"
+                                               class="form-control" 
+                                               min="0" max="100" step="0.1" 
+                                               placeholder="% giảm giá">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6>Giảm giá theo sản phẩm cụ thể</h6>
+                        <div class="mb-3">
+                            <input type="text" id="editProductSearch" class="form-control" placeholder="Tìm kiếm sản phẩm...">
+                        </div>
+                        <div id="editProductDiscounts" style="max-height: 300px; overflow-y: auto;">
+                            <div th:each="product : ${products}" class="row mb-2 product-item">
+                                <div class="col-md-6">
+                                    <label class="form-label" th:text="${product.name}"></label>
+                                    <small class="text-muted d-block" th:text="${product.category}"></small>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <input type="number" 
+                                               th:name="'productDiscount_' + ${product.id}"
+                                               th:value="${promotionService.getProductDiscount(promotion, product.id)}"
+                                               class="form-control" 
+                                               min="0" max="100" step="0.1" 
+                                               placeholder="% giảm giá">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Cập nhật</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function editPromotion() {
+            const modal = new bootstrap.Modal(document.getElementById('editPromotionModal'));
+            modal.show();
+        }
+
+        // Search products in edit modal
+        document.getElementById('editProductSearch')?.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll('#editProductDiscounts .product-item').forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>

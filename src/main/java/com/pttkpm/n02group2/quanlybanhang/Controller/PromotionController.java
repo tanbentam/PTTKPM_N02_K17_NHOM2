@@ -55,6 +55,7 @@ public class PromotionController {
                 model.addAttribute("promotion", promotion);
                 model.addAttribute("categories", categories);
                 model.addAttribute("products", products);
+                model.addAttribute("promotionService", promotionService); // Thêm service vào model
                 
                 return "admin/promotions/view";
             } else {

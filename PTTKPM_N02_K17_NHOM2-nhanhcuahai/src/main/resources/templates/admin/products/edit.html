@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <form th:action="@{'/admin/products/' + ${product.id} + '/update'}" method="post" enctype="multipart/form-data">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Tên sản phẩm *</label>
+                    <input type="text" class="form-control" name="name" th:value="${product.name}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Danh mục *</label>
+                    <select class="form-select" name="category" required>
+                        <option value="">Chọn danh mục</option>
+                        <option value="electronics" th:selected="${product.category == 'electronics'}">Điện tử</option>
+                        <option value="clothing" th:selected="${product.category == 'clothing'}">Thời trang</option>
+                        <option value="home" th:selected="${product.category == 'home'}">Gia dụng</option>
+                        <option value="books" th:selected="${product.category == 'books'}">Sách</option>
+                        <option value="sports" th:selected="${product.category == 'sports'}">Thể thao</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Giá bán *</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" name="price" th:value="${product.price}" min="0" required>
+                        <span class="input-group-text">₫</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Số lượng *</label>
+                    <input type="number" class="form-control" name="quantity" th:value="${product.quantity}" min="0" required>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Mô tả</label>
+            <textarea class="form-control" name="description" rows="4" th:text="${product.description}"></textarea>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Hình ảnh hiện tại</label>
+                    <div class="text-center p-3 border rounded">
+                        <img th:src="@{${product.imagePath} ?: '/images/no-image.png'}" 
+                             alt="Current Image" class="img-thumbnail" style="max-height: 150px;">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Thay đổi hình ảnh</label>
+                    <input type="file" class="form-control" name="image" accept="image/*">
+                    <div class="form-text">Để trống nếu không muốn thay đổi hình ảnh</div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="active" 
+                               th:checked="${product.active}" id="activeCheck">
+                        <label class="form-check-label" for="activeCheck">
+                            Đang được bán
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Thông tin bổ sung -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Thông Tin Bổ Sung</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Mã SKU</label>
+                            <input type="text" class="form-control" name="sku" th:value="${product.sku}" placeholder="SP001">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Trọng lượng (g)</label>
+                            <input type="number" class="form-control" name="weight" th:value="${product.weight}" min="0">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Kích thước</label>
+                            <input type="text" class="form-control" name="dimensions" th:value="${product.dimensions}" placeholder="20x30x10 cm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="submit" class="btn btn-warning">
+                <i class="fas fa-save"></i> Cập Nhật Sản Phẩm
+            </button>
+        </div>
+    </form>
+</body>
+</html>

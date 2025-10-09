@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh Toán - POS Bán Hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .payment-container { max-width: 800px; margin: 50px auto; }
+        .order-summary { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .payment-methods { background: white; border-radius: 10px; padding: 20px; margin-top: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .total-section { background: linear-gradient(45deg, #28a745, #20c997); color: white; padding: 20px; border-radius: 10px; margin-top: 20px; }
+        .receipt-modal .modal-dialog { max-width: 600px; }
+        @media print { .no-print { display: none; } body * { visibility: hidden; } .receipt-modal .modal-content { visibility: visible; position: absolute; left: 0; top: 0; width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="container payment-container">
+        <h2 class="text-center mb-4"><i class="fas fa-credit-card"></i> Thanh Toán Đơn Hàng</h2>
+        
+        <!-- Tóm tắt đơn hàng -->
+        <div class="order-summary">
+            <h5><i class="fas fa-shopping-cart"></i> Tóm Tắt Đơn Hàng</h5>
+            <div id="orderSummary">
+                <div class="mb-3">
+                    <strong>Khách hàng:</strong> 
+                    <span th:if="${selectedCustomer != null}" th:text="${selectedCustomer.name}"></span>
+                    <span th:if="${selectedCustomer == null}">Khách lẻ</span>
+                </div>
+                <div class="mb-3" th:if="${selectedCustomer != null && selectedCustomer.phone != null && !#strings.isEmpty(selectedCustomer.phone)}">
+                    <strong>SĐT:</strong>
+                    <span th:text="${selectedCustomer.phone}"></span>
+                </div>
+                <div class="mb-3" th:if="${selectedCustomer != null}">
+                    <strong>Địa chỉ:</strong>
+                    <span th:text="${(#strings.isEmpty(selectedCustomer.address) ? '' : selectedCustomer.address + ', ') + 
+                                  (#strings.isEmpty(selectedCustomer.ward) ? '' : selectedCustomer.ward + ', ') + 
+                                  (#strings.isEmpty(selectedCustomer.district) ? '' : selectedCustomer.district + ', ') + 
+                                  (#strings.isEmpty(selectedCustomer.province) ? '' : selectedCustomer.province)}"></span>
+                </div>
+                <!-- ...existing code... -->
+<div class="mb-3" th:if="${selectedCustomer != null}">
+    <strong>Ngày sinh:</strong>
+    <span th:if="${selectedCustomer.dateOfBirth != null && !#strings.isEmpty(selectedCustomer.dateOfBirth)}" 
+          th:text="${selectedCustomer.dateOfBirth}"></span>
+    <span th:if="${selectedCustomer.dateOfBirth == null || #strings.isEmpty(selectedCustomer.dateOfBirth)}">Chưa có thông tin</span>
+</div>
+<!-- ...existing code... -->
+                <div class="mb-3" th:if="${selectedCustomer != null}">
+                    <strong>Loại khách:</strong>
+                    <span th:text="${selectedCustomer.vip ? 'VIP' : (selectedCustomer.pendingVip ? 'Chờ xác nhận VIP' : 'Thường')}"></span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th>SL</th>
+                                <th>Giá</th>
+                                <th>Tổng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="item : ${cartItems}">
+                                <td th:text="${item.productName}"></td>
+                                <td th:text="${item.quantity}"></td>
+                                <td th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></td>
+                                <td th:text="${#numbers.formatDecimal(item.quantity * item.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phương thức thanh toán -->
+        <form id="paymentForm" th:action="@{/user/pos/process-payment}" method="post">
+            <input type="hidden" name="paymentMethod" id="paymentMethodInput" value="cash">
+            <input type="hidden" name="notes" value="">
+            <input type="hidden" name="createVipRequest" th:value="${selectedCustomer != null and selectedCustomer.id != null and subtotal >= 2000000 and !selectedCustomer.vip and !selectedCustomer.pendingVip ? 'true' : 'false'}">
+            <div class="payment-methods">
+                <h5><i class="fas fa-money-bill-wave"></i> Chọn Phương Thức Thanh Toán</h5>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="paymentMethodRadio" id="cash" value="cash" checked>
+                    <label class="form-check-label" for="cash">
+                        <i class="fas fa-money-bill-wave"></i> Tiền Mặt
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="paymentMethodRadio" id="card" value="card">
+                    <label class="form-check-label" for="card">
+                        <i class="fas fa-credit-card"></i> Thẻ Tín Dụng/Ghi Nợ
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="paymentMethodRadio" id="transfer" value="transfer">
+                    <label class="form-check-label" for="transfer">
+                        <i class="fas fa-university"></i> Chuyển Khoản Ngân Hàng
+                    </label>
+                </div>
+            </div>
+            <!-- Tổng tiền và nút thanh toán -->
+            <div class="total-section">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tổng sản phẩm:</span>
+                    <strong id="totalItems" th:text="${#aggregates.sum(cartItems.![quantity])}"></strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tạm tính:</span>
+                    <strong id="subtotal" th:text="${#numbers.formatDecimal(subtotal, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Giảm giá VIP:</span>
+                    <strong id="vipDiscount" th:text="${vipDiscountAmount > 0 ? '-' + #numbers.formatDecimal(vipDiscountAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}"></strong>
+                </div>
+                <div class="d-flex justify-content-between mb-3 fs-4">
+                    <span><strong>THÀNH TIỀN:</strong></span>
+                    <strong id="grandTotal" th:text="${#numbers.formatDecimal(finalAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></strong>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-check"></i> Xác Nhận Thanh Toán
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="goBack()">
+                        <i class="fas fa-arrow-left"></i> Quay Lại
+                    </button>
+                </div>
+            </div>
+        </form>
+
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center py-4 bg-light">
+                    <div class="spinner-grow text-primary me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h6 class="text-muted mb-0">Đang xử lý thanh toán...</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" th:if="${success != null}">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-check-circle"></i> Thanh Toán Thành Công</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <h4 th:utext="${success}"></h4>
+                    <input type="hidden" id="orderIdInput" th:value="${orderId}" />
+                    <p th:if="${vipMessage != null}" th:text="${vipMessage}"></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-success" onclick="showReceiptModal()">
+                        <i class="fas fa-print"></i> In Hóa Đơn
+                    </button>
+                    <button class="btn btn-secondary" onclick="newTransaction()">
+                        <i class="fas fa-plus"></i> Giao Dịch Mới
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div class="modal fade receipt-modal" id="receiptModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file-invoice"></i> Hóa Đơn Cửa Hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="receiptContent">
+                    <!-- Nội dung sẽ được load qua AJAX -->
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer no-print">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" onclick="printReceipt()">
+                        <i class="fas fa-print"></i> In Hóa Đơn
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cập nhật paymentMethod khi chọn radio
+            document.querySelectorAll('input[name="paymentMethodRadio"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.getElementById('paymentMethodInput').value = this.value;
+                });
+            });
+
+            // Hiển thị modal success nếu có
+            if (document.getElementById('successModal')) {
+                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                successModal.show();
+            }
+
+            // Chặn double submit form thanh toán
+            const paymentForm = document.getElementById('paymentForm');
+            if (paymentForm) {
+                paymentForm.addEventListener('submit', function(e) {
+                    const submitBtn = paymentForm.querySelector('button[type="submit"]');
+                    if (submitBtn.disabled) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    submitBtn.disabled = true;
+                });
+            }
+        });
+
+        function goBack() {
+            window.location.href = '/user/pos';
+        }
+
+        function newTransaction() {
+            fetch('/user/pos/clear-session', { method: 'POST' })
+                .then(() => {
+                    window.location.href = '/user/pos';
+                })
+                .catch(() => {
+                    window.location.href = '/user/pos';
+                });
+        }
+
+        function showReceiptModal() {
+            var orderId = document.getElementById('orderIdInput') ? document.getElementById('orderIdInput').value : null;
+            if (!orderId) {
+                alert('Không tìm thấy orderId');
+                return;
+            }
+            fetch(`/user/pos/receipt-data/${orderId}`)
+                .then(response => response.json())
+                .then(orderData => {
+                    if (orderData.success) {
+                        populateReceiptModal(orderData.data);
+                        const receiptModal = new bootstrap.Modal(document.getElementById('receiptModal'));
+                        receiptModal.show();
+                    } else {
+                        alert('Lỗi: ' + orderData.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Không thể tải dữ liệu hóa đơn');
+                });
+        }
+
+        
+
+    function populateReceiptModal(orderData) {
+        console.log('Full orderData:', orderData);
+        console.log('cashierName:', orderData.cashierName);
+
+        const customer = orderData.customer || {};
+        const isVip = customer.vip ? 'VIP' : (customer.pendingVip ? 'Chờ xác nhận VIP' : 'Thường');
+
+        // Xử lý ngày sinh
+        let dob = '';
+        if (customer.dateOfBirth) {
+            if (typeof customer.dateOfBirth === 'string') {
+                if (/^\d{2}\/\d{2}\/\d{4}$/.test(customer.dateOfBirth)) {
+                    dob = customer.dateOfBirth;
+                } else if (/^\d{4}-\d{2}-\d{2}$/.test(customer.dateOfBirth)) {
+                    const [y, m, d] = customer.dateOfBirth.split('-');
+                    dob = `${d}/${m}/${y}`;
+                } else {
+                    try {
+                        const date = new Date(customer.dateOfBirth);
+                        if (!isNaN(date)) {
+                            dob = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+                        }
+                    } catch (e) {
+                        dob = customer.dateOfBirth;
+                    }
+                }
+            } else if (Array.isArray(customer.dateOfBirth) && customer.dateOfBirth.length >= 3) {
+                dob = `${String(customer.dateOfBirth[2]).padStart(2, '0')}/${String(customer.dateOfBirth[1]).padStart(2, '0')}/${customer.dateOfBirth[0]}`;
+            }
+        }
+
+        // Xử lý địa chỉ đầy đủ
+        let address = '';
+        if (customer.address || customer.ward || customer.district || customer.province) {
+            const parts = [];
+            if (customer.address && customer.address.trim() !== '') parts.push(customer.address);
+            if (customer.ward && customer.ward.trim() !== '') parts.push(customer.ward);
+            if (customer.district && customer.district.trim() !== '') parts.push(customer.district);
+            if (customer.province && customer.province.trim() !== '') parts.push(customer.province);
+            address = parts.join(', ');
+        }
+
+        // Map phương thức thanh toán
+        const paymentMethodMap = {
+            'cash': 'Tiền mặt',
+            'card': 'Thẻ',
+            'transfer': 'Chuyển khoản',
+            'Tiền mặt': 'Tiền mặt',
+            'Thẻ tín dụng/Ghi nợ': 'Thẻ',
+            'Chuyển khoản': 'Chuyển khoản'
+        };
+        const paymentMethod = paymentMethodMap[orderData.paymentMethod] || orderData.paymentMethod || 'Tiền mặt';
+
+        // Logic thu ngân
+        let cashierName = 'Admin';
+        if (orderData.cashierName && orderData.cashierName.trim() !== '' && orderData.cashierName !== 'null') {
+            cashierName = orderData.cashierName;
+        } else if (orderData.createdBy && orderData.createdBy.trim() !== '' && orderData.createdBy !== 'null') {
+            cashierName = orderData.createdBy;
+        }
+
+        console.log('Final cashierName:', cashierName);
+
+        const content = `
+        <div class="receipt-container" style="width:280px; font-size:12px; font-family:'Courier New', monospace; color:#000; line-height:1.4;">
+            <!-- HEADER -->
+            <div style="text-align:center; margin-bottom:10px;">
+                <div style="font-size:16px; font-weight:bold; margin-bottom:4px;">CỬA HÀNG ABC MART</div>
+                <div style="font-size:11px;">123 Đường ABC, Quận XYZ, TP.HCM</div>
+                <div style="font-size:11px;">Hotline: 0123-456-789</div>
+            </div>
+            <div style="text-align:center; border-top:1px solid #000; border-bottom:1px solid #000; padding:4px 0; margin:8px 0;">
+                <div style="font-size:14px; font-weight:bold;">HÓA ĐƠN BÁN HÀNG</div>
+            </div>
+            
+            <!-- ORDER INFO -->
+            <div style="margin-bottom:8px; font-size:11px;">
+                <div>Số HĐ: <span style="font-weight:bold;">${orderData.orderNumber}</span></div>
+                <div>Ngày: <span style="font-weight:bold;">${new Date(orderData.createdAt).toLocaleString('vi-VN')}</span></div>
+                <div>Thu ngân: <span style="font-weight:bold;">${cashierName}</span></div>
+            </div>
+            
+            <div style="border-top:1px dashed #000; margin:6px 0;"></div>
+            
+            <!-- CUSTOMER INFO -->
+            <div style="margin-bottom:8px; font-size:11px;">
+                <div>Khách hàng: <span style="font-weight:bold;">${customer.name || 'Khách lẻ'}</span></div>
+                ${address ? `<div>Địa chỉ: <span style="font-weight:bold;">${address}</span></div>` : ''}
+                ${customer.phone && customer.phone.trim() !== '' ? `<div>SĐT: <span style="font-weight:bold;">${customer.phone}</span></div>` : ''}
+                ${dob ? `<div>Ngày sinh: <span style="font-weight:bold;">${dob}</span></div>` : ''}
+                <div>Loại: <span style="font-weight:bold;">${isVip}</span></div>
+            </div>
+            
+            <div style="border-top:1px dashed #000; margin:6px 0;"></div>
+            
+            <!-- ITEMS TABLE -->
+            <table style="width:100%; font-size:11px; border-collapse:collapse;">
+                <thead>
+                    <tr style="border-bottom:1px solid #000;">
+                        <th style="text-align:left; padding:2px 0; font-weight:bold;">Tên sản phẩm</th>
+                        <th style="text-align:right; padding:2px 0; font-weight:bold; width:60px;">Thành tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${orderData.items.map(item => `
+                        <tr>
+                            <td style="padding:2px 0;">
+                                <div style="font-weight:bold;">${item.name}</div>
+                                <div style="font-size:10px; color:#666;">
+                                    ${item.quantity} x ${item.unitPrice.toLocaleString('vi-VN')}đ
+                                </div>
+                            </td>
+                            <td style="text-align:right; padding:2px 0; font-weight:bold;">
+                                ${item.totalPrice.toLocaleString('vi-VN')}đ
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            
+            <div style="border-top:1px solid #000; margin:6px 0;"></div>
+            
+            <!-- TOTALS -->
+            <div style="font-size:11px;">
+                <div style="display:flex; justify-content:space-between;">
+                    <span>Tạm tính:</span>
+                    <span style="font-weight:bold;">${orderData.totalAmount.toLocaleString('vi-VN')}đ</span>
+                </div>
+                ${orderData.vipDiscountAmount > 0 ? `
+                <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                    <span>Giảm giá VIP:</span>
+                    <span style="font-weight:bold;">-${orderData.vipDiscountAmount.toLocaleString('vi-VN')}đ</span>
+                </div>
+                ` : ''}
+                <div style="border-top:1px dashed #000; margin:4px 0;"></div>
+                <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:bold;">
+                    <span>TỔNG CỘNG:</span>
+                    <span>${orderData.finalAmount.toLocaleString('vi-VN')}đ</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:2px;">
+                    <span>Thanh toán:</span>
+                    <span style="font-weight:bold;">${paymentMethod}</span>
+                </div>
+            </div>
+            
+            <div style="border-top:1px solid #000; margin:8px 0;"></div>
+            
+            <!-- QUY ĐỊNH ĐỔI TRẢ CHI TIẾT -->
+            <div style="font-size:9px; font-weight:bold; text-align:left; margin-top:4px;">
+                <div style="font-weight:bold; margin-bottom:2px; text-align:center;">QUY ĐỊNH ĐỔI TRẢ & LƯU Ý:</div>
+                <div style="margin-bottom:1px;">- Đổi trả hàng trong vòng 3 ngày với</div>
+                <div style="margin-bottom:1px;">  hóa đơn và sản phẩm còn nguyên vẹn</div>
+                <div style="margin-bottom:1px;">- Sản phẩm khuyến mãi không áp dụng</div>
+                <div style="margin-bottom:1px;">  đổi trả</div>
+                <div style="margin-bottom:1px;">- Vui lòng kiểm tra kỹ sản phẩm</div>
+                <div style="margin-bottom:1px;">  trước khi rời khỏi cửa hàng</div>
+                <div style="margin-bottom:1px;">- Mọi thắc mắc xin liên hệ hotline</div>
+                <div style="margin-bottom:1px;">- Hóa đơn chỉ có giá trị trong</div>
+                <div>  ngày mua hàng</div>
+            </div>
+            
+            <div style="border-top:1px dashed #000; margin:4px 0;"></div>
+            
+            <div style="text-align:center; margin-top:4px; font-size:10px; font-weight:bold;">
+                <div style="margin-bottom:1px;">Hẹn gặp lại!</div>
+            </div>
+        </div>
+        `;
+        document.getElementById('receiptContent').innerHTML = content;
+    }
+
+function printReceipt() {
+    const receipt = document.getElementById('receiptContent');
+    const printWindow = window.open('', '', 'width=300,height=800');
+    printWindow.document.write(`
+    <html>
+        <head>
+            <title>HÓA ĐƠN BÁN HÀNG</title>
+            <style>
+                body { 
+                    font-family: 'Courier New', monospace; 
+                    background: #fff; 
+                    color: #000; 
+                    margin: 0;
+                    padding: 5px;
+                }
+                .receipt-container { 
+                    width: 280px; 
+                    font-size: 12px; 
+                    margin: 0 auto; 
+                    line-height: 1.4;
+                }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                }
+                th, td { 
+                    padding: 2px 0; 
+                    font-size: 11px;
+                }
+                th { 
+                    border-bottom: 1px solid #000; 
+                    font-weight: bold; 
+                }
+                div, span, th, td { 
+                    font-weight: bold !important; 
+                    color: #000 !important;
+                }
+                @media print {
+                    @page {
+                        size: 58mm 210mm;
+                        margin: 2mm !important;
+                    }
+                    body { 
+                        margin: 0 !important; 
+                        padding: 2px !important; 
+                        font-size: 11px !important;
+                    }
+                    .receipt-container { 
+                        width: 100% !important; 
+                        max-width: 56mm !important;
+                        font-size: 11px !important;
+                        line-height: 1.2 !important;
+                    }
+                    th, td {
+                        font-size: 11px !important;
+                        line-height: 1.2 !important;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            ${receipt.innerHTML}
+        </body>
+    </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
+}
+    </script>
+</body>
+</html>

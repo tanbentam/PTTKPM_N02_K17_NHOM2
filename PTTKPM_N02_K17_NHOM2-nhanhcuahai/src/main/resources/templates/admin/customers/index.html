@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý khách hàng - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background: #f8f9fa; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .sidebar { 
+            background: linear-gradient(180deg, #4e73df 0%, #224abe 100%);
+            min-height: 100vh; 
+            color: #fff; 
+            width: 250px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+        .sidebar .nav-link { 
+            color: #fff; 
+            padding: 12px 20px;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link.active, 
+        .sidebar .nav-link:hover { 
+            background: rgba(255,255,255,0.1); 
+            border-left: 4px solid #fff;
+        }
+        .sidebar .nav-link i { margin-right: 12px; }
+        .main-content { 
+            margin-left: 250px; 
+            padding: 20px;
+            width: calc(100% - 250px);
+        }
+        .card { 
+            border-radius: 10px; 
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            border: none;
+        }
+        .sidebar-brand {
+            padding: 1.5rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .table {
+            width: 100% !important;
+            min-width: 1200px;
+        }
+        .table th:nth-child(1) { width: 5%; }
+        .table th:nth-child(2) { width: 20%; }
+        .table th:nth-child(3) { width: 15%; }
+        .table th:nth-child(4) { width: 25%; }
+        .table th:nth-child(5) { width: 15%; }
+        .table th:nth-child(6) { width: 10%; }
+        .table th:nth-child(7) { width: 10%; }
+        /* CSS để nút Xem và Xóa cách nhau */
+        .btn-actions .btn {
+            margin-right: 5px;
+        }
+        .btn-actions .btn:last-child {
+            margin-right: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fas fa-store fa-2x mb-2"></i>
+                <div class="fw-bold fs-5">Admin Panel</div>
+            </div>
+            <ul class="nav flex-column mt-3">
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/dashboard">
+                        <i class="fas fa-tachometer-alt"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/products">
+                        <i class="fas fa-box"></i>Sản Phẩm
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/admin/customers">
+                        <i class="fas fa-users"></i>Khách Hàng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/orders">
+                        <i class="fas fa-shopping-cart"></i>Đơn Hàng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/inventory">
+                        <i class="fas fa-warehouse"></i>Kho Hàng
+                    </a>
+                </li>
+                <li class="nav-item mt-auto">
+                    <a class="nav-link" href="/auth/logout">
+                        <i class="fas fa-sign-out-alt"></i>Đăng Xuất
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0 text-gray-800">
+                    <i class="fas fa-users"></i> Quản lý khách hàng
+                </h1>
+                <div class="d-flex">
+                    <form class="d-flex" th:action="@{/admin/customers}" method="get">
+                        <input class="form-control me-2" type="search" name="search" 
+                               th:value="${search}" placeholder="Tìm kiếm khách hàng...">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Thông báo -->
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Thống kê -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        Tổng khách hàng
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${totalCustomers ?: 0}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                        Khách VIP
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${vipCustomers ?: 0}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-crown fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng khách hàng -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Danh sách khách hàng</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0" width="100%" cellspacing="0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên khách hàng</th>
+                                    <th>Số điện thoại</th>
+                                    <th>Địa chỉ</th>
+                                    <th>Tổng tiền đã mua</th>
+                                    <th>Trạng thái VIP</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="customer : ${customers}">
+                                    <td th:text="${customer.id}">1</td>
+                                    <td th:text="${customer.name}">Nguyễn Văn A</td>
+                                    <td th:text="${customer.phone}">0123456789</td>
+                                    <td th:text="${customer.address}">Hà Nội</td>
+                                    <td th:text="${#numbers.formatDecimal(customer.totalSpent ?: 0, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">0 VNĐ</td>
+                                    <td>
+                                        <span th:if="${customer.vip}" class="badge bg-warning text-dark">
+                                            <i class="fas fa-crown"></i> VIP
+                                        </span>
+                                        <span th:unless="${customer.vip}" class="badge bg-secondary">Thường</span>
+                                    </td>
+                                    <td class="btn-actions">
+                                        <a th:href="@{/admin/customers/{id}(id=${customer.id})}" 
+                                           class="btn btn-info btn-sm">
+                                            <i class="fas fa-eye"></i> Xem
+                                        </a>
+                                        <a th:href="@{/admin/customers/{id}/delete(id=${customer.id})}" 
+                                           class="btn btn-danger btn-sm"
+                                           onclick="return confirm('Bạn có chắc chắn muốn xóa khách hàng này?');">
+                                            <i class="fas fa-trash"></i> Xóa
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(customers)}">
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="fas fa-users fa-2x mb-2"></i><br>
+                                        Chưa có khách hàng nào
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phân trang -->
+            <nav th:if="${totalPages > 1}">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/customers(page=${currentPage-1},size=${size},search=${search})}">Trước</a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages-1)}"
+                        th:classappend="${i == currentPage} ? 'active'">
+                        <a class="page-link" th:href="@{/admin/customers(page=${i},size=${size},search=${search})}" 
+                           th:text="${i+1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/customers(page=${currentPage+1},size=${size},search=${search})}">Sau</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

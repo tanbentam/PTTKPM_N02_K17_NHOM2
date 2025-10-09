@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <!-- Modal Tìm Kiếm Sản Phẩm -->
+    <div th:fragment="searchProductModal" class="modal fade" id="searchProductModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-search text-primary"></i> Tìm Kiếm Sản Phẩm
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/products}" method="get">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Tên sản phẩm</label>
+                                    <input type="text" class="form-control" name="search" th:value="${search}" placeholder="Nhập tên sản phẩm...">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Danh mục</label>
+                                    <select class="form-select" name="category" required>
+    <option value="">Chọn danh mục</option>
+    <option value="electronics">Điện tử</option>
+    <option value="clothing">Thời trang</option>
+    <option value="home">Gia dụng</option>
+    <option value="books">Sách</option>
+    <option value="sports">Thể thao</option>
+    <option value="cosmetics">Mỹ phẩm</option>
+    <option value="toys">Đồ chơi</option>
+    <option value="accessories">Phụ kiện</option>
+    <option value="food">Thực phẩm</option>
+    <option value="furniture">Nội thất</option>
+</select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Giá từ</label>
+                                    <input type="number" class="form-control" name="minPrice" th:value="${minPrice}" min="0" step="0.01" placeholder="Giá tối thiểu">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Giá đến</label>
+                                    <input type="number" class="form-control" name="maxPrice" th:value="${maxPrice}" min="0" step="0.01" placeholder="Giá tối đa">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Trạng thái kho</label>
+                                    <select class="form-select" name="stockStatus">
+                                        <option value="">Tất cả</option>
+                                        <option value="in-stock" th:selected="${stockStatus == 'in-stock'}">Còn hàng (>10)</option>
+                                        <option value="low-stock" th:selected="${stockStatus == 'low-stock'}">Sắp hết (1-10)</option>
+                                        <option value="out-of-stock" th:selected="${stockStatus == 'out-of-stock'}">Hết hàng</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Sắp xếp theo</label>
+                                    <select class="form-select" name="sortBy">
+                                        <option value="id" th:selected="${sortBy == 'id'}">ID</option>
+                                        <option value="name" th:selected="${sortBy == 'name'}">Tên</option>
+                                        <option value="price" th:selected="${sortBy == 'price'}">Giá</option>
+                                        <option value="quantity" th:selected="${sortBy == 'quantity'}">Số lượng</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Thứ tự</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="sortDir" id="sortAsc" value="asc" th:checked="${sortDir == 'asc'}">
+                                <label class="form-check-label" for="sortAsc">Tăng dần</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="sortDir" id="sortDesc" value="desc" th:checked="${sortDir == 'desc' or sortDir == null}">
+                                <label class="form-check-label" for="sortDesc">Giảm dần</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Tìm Kiếm
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Sản Phẩm -->
+    <div th:fragment="addProductModal" class="modal fade" id="addProductModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus text-success"></i> Thêm Sản Phẩm Mới
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="addProductForm" th:action="@{/admin/products/add}" method="post" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Tên sản phẩm *</label>
+                                    <input type="text" class="form-control" name="name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Danh mục *</label>
+                                    <select class="form-select" name="category" required>
+    <option value="">Chọn danh mục</option>
+    <option value="electronics">Điện tử</option>
+    <option value="clothing">Thời trang</option>
+    <option value="home">Gia dụng</option>
+    <option value="books">Sách</option>
+    <option value="sports">Thể thao</option>
+    <option value="cosmetics">Mỹ phẩm</option>
+    <option value="toys">Đồ chơi</option>
+    <option value="accessories">Phụ kiện</option>
+    <option value="food">Thực phẩm</option>
+    <option value="furniture">Nội thất</option>
+</select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Giá bán *</label>
+                                    <input type="number" class="form-control" name="price" min="0" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Số lượng *</label>
+                                    <input type="number" class="form-control" name="quantity" min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Hình ảnh</label>
+                            <input type="file" class="form-control" name="imageFile" accept="image/*">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Lưu Sản Phẩm
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Xem Chi Tiết -->
+    <div th:fragment="viewProductModal" class="modal fade" id="viewProductModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-eye text-info"></i> Chi Tiết Sản Phẩm
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="viewProductContent">
+                    <!-- Nội dung sẽ được load qua AJAX -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-warning" onclick="editProduct()">
+                        <i class="fas fa-edit"></i> Chỉnh Sửa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chỉnh Sửa -->
+    <div th:fragment="editProductModal" class="modal fade" id="editProductModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit text-warning"></i> Chỉnh Sửa Sản Phẩm
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="editProductContent">
+                    <!-- Nội dung sẽ được load qua AJAX -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cập Nhật Kho -->
+    <div th:fragment="updateStockModal" class="modal fade" id="updateStockModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-warehouse text-success"></i> Cập Nhật Kho Hàng
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/products/update-stock}" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" id="stockProductId" name="id">
+                        <p>Sản phẩm: <strong id="stockProductName"></strong></p>
+                        <div class="mb-3">
+                            <label class="form-label">Số lượng hiện tại</label>
+                            <input type="number" id="currentStock" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Số lượng mới *</label>
+                            <input type="number" id="newStock" name="quantity" class="form-control" min="0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ghi chú</label>
+                            <textarea class="form-control" name="note" rows="2" placeholder="Lý do cập nhật kho..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Cập Nhật
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Xóa -->
+    <div th:fragment="deleteModal" class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="fas fa-trash"></i> Xác Nhận Xóa
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Cảnh báo:</strong> Hành động này không thể hoàn tác!
+                    </div>
+                    <p>Bạn có chắc chắn muốn xóa sản phẩm:</p>
+                    <p class="fw-bold text-danger" id="deleteProductName"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <form id="deleteForm" th:action="@{/admin/products/delete}" method="post" style="display: inline;">
+                        <input type="hidden" id="deleteProductId" name="id">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Xóa Vĩnh Viễn
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Bulk Actions -->
+    <div th:fragment="bulkActionsModal" class="modal fade" id="bulkStockModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-warehouse"></i> Cập Nhật Kho Hàng Loạt
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/products/bulk-update-stock}" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" id="bulkStockProductIds" name="ids">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            Cập nhật số lượng cho <span id="bulkCount">0</span> sản phẩm được chọn
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Số lượng mới *</label>
+                            <input type="number" name="quantity" class="form-control" min="0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ghi chú</label>
+                            <textarea class="form-control" name="note" rows="2" placeholder="Lý do cập nhật hàng loạt..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save"></i> Cập Nhật Tất Cả
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript cho các modal -->
+    <script>
+        // Hàm load chi tiết sản phẩm
+        function viewProduct(productId) {
+            fetch(`/admin/products/view/${productId}`)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('viewProductContent').innerHTML = html;
+                    new bootstrap.Modal(document.getElementById('viewProductModal')).show();
+                })
+                .catch(error => {
+                    console.error('Error loading product details:', error);
+                    document.getElementById('viewProductContent').innerHTML = 
+                        '<div class="alert alert-danger">Có lỗi xảy ra khi tải thông tin sản phẩm!</div>';
+                });
+        }
+
+        // Hàm load form chỉnh sửa
+        function editProduct(productId) {
+            fetch(`/admin/products/edit/${productId}`)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('editProductContent').innerHTML = html;
+                    bootstrap.Modal.getInstance(document.getElementById('viewProductModal')).hide();
+                    new bootstrap.Modal(document.getElementById('editProductModal')).show();
+                })
+                .catch(error => {
+                    console.error('Error loading edit form:', error);
+                    document.getElementById('editProductContent').innerHTML = 
+                        '<div class="alert alert-danger">Có lỗi xảy ra khi tải form chỉnh sửa!</div>';
+                });
+        }
+
+        // Hàm hiển thị modal xóa
+        function deleteProduct(productId, productName) {
+            document.getElementById('deleteProductId').value = productId;
+            document.getElementById('deleteProductName').textContent = productName;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+
+        // Hàm cập nhật kho
+        function updateStock(productId, productName, currentStock) {
+            document.getElementById('stockProductId').value = productId;
+            document.getElementById('stockProductName').textContent = productName;
+            document.getElementById('currentStock').value = currentStock;
+            document.getElementById('newStock').value = currentStock;
+            new bootstrap.Modal(document.getElementById('updateStockModal')).show();
+        }
+
+        // Hàm bulk update stock
+        function bulkUpdateStock(selectedIds) {
+            if (selectedIds.length === 0) {
+                alert('Vui lòng chọn ít nhất một sản phẩm!');
+                return;
+            }
+            document.getElementById('bulkStockProductIds').value = selectedIds.join(',');
+            document.getElementById('bulkCount').textContent = selectedIds.length;
+            new bootstrap.Modal(document.getElementById('bulkStockModal')).show();
+        }
+    </script>
+</body>
+</html>

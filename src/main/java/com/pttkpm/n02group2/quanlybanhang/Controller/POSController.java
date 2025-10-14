@@ -1261,7 +1261,14 @@ public String viewOrderDetailLegacy(@RequestParam("id") Long id, Model model, Ht
     @ResponseBody
     public ResponseEntity<?> getAllProductsWithPromotions() {
         try {
-            List<Product> products = productService.getAllProducts();
+            List<Product> products = productService.getAllProducts()
+                .stream()
+                .filter(p -> p.getQuantity() > 0)
+                .toList();
+            
+            // Sử dụng bulk processing thay vì lặp từng sản phẩm
+            Map<Long, Map<String, Object>> bulkDiscountInfo = promotionService.getBulkDiscountInfo(products);
+            
             List<Map<String, Object>> productsWithPromotions = new ArrayList<>();
             
             for (Product product : products) {
@@ -1271,8 +1278,8 @@ public String viewOrderDetailLegacy(@RequestParam("id") Long id, Model model, Ht
                 productData.put("category", product.getCategory());
                 productData.put("quantity", product.getQuantity());
                 
-                // Lấy thông tin khuyến mại
-                Map<String, Object> discountInfo = promotionService.getDiscountInfo(product);
+                // Lấy thông tin khuyến mại từ bulk result
+                Map<String, Object> discountInfo = bulkDiscountInfo.get(product.getId());
                 productData.put("originalPrice", discountInfo.get("originalPrice"));
                 productData.put("discountPercent", discountInfo.get("discountPercent"));
                 productData.put("discountedPrice", discountInfo.get("discountedPrice"));

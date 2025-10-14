@@ -88,10 +88,11 @@ private OrderRepository orderRepository;
     // ==================== PRODUCT SEARCH ====================
 
     @GetMapping("/search")
-    @ResponseBody
-    public List<Product> searchProducts(@RequestParam String query) {
+@ResponseBody
+public ResponseEntity<?> searchProducts(@RequestParam String query) {
+    try {
         String lowerQuery = query.toLowerCase();
-        return productService.getAllProducts().stream()
+        List<Product> products = productService.getAllProducts().stream()
             .filter(p -> p.getQuantity() > 0 &&
                 (
                     (p.getName() != null && p.getName().toLowerCase().contains(lowerQuery)) ||
@@ -99,9 +100,40 @@ private OrderRepository orderRepository;
                     (p.getCategory() != null && p.getCategory().toLowerCase().contains(lowerQuery))
                 )
             )
-            .limit(10)
+            .limit(50)
             .toList();
+        
+        // Sử dụng bulk processing để lấy thông tin khuyến mại
+        Map<Long, Map<String, Object>> bulkDiscountInfo = promotionService.getBulkDiscountInfo(products);
+        
+        List<Map<String, Object>> productsWithPromotions = new ArrayList<>();
+        
+        for (Product product : products) {
+            Map<String, Object> productData = new HashMap<>();
+            productData.put("id", product.getId());
+            productData.put("name", product.getName());
+            productData.put("category", product.getCategory());
+            productData.put("quantity", product.getQuantity());
+            
+            // Lấy thông tin khuyến mại từ bulk result
+            Map<String, Object> discountInfo = bulkDiscountInfo.get(product.getId());
+            productData.put("originalPrice", discountInfo.get("originalPrice"));
+            productData.put("discountPercent", discountInfo.get("discountPercent"));
+            productData.put("discountedPrice", discountInfo.get("discountedPrice"));
+            productData.put("hasDiscount", discountInfo.get("hasDiscount"));
+            productData.put("discountSource", discountInfo.get("discountSource"));
+            
+            productsWithPromotions.add(productData);
+        }
+        
+        return ResponseEntity.ok(productsWithPromotions);
+    } catch (Exception e) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("success", false);
+        error.put("message", e.getMessage());
+        return ResponseEntity.badRequest().body(error);
     }
+}
 
     @GetMapping("/products")
     @ResponseBody
@@ -122,16 +154,48 @@ private OrderRepository orderRepository;
     }
 
     @GetMapping("/search-by-category")
-    @ResponseBody
-    public List<Product> searchProductsByCategory(@RequestParam String category) {
+@ResponseBody
+public ResponseEntity<?> searchProductsByCategory(@RequestParam String category) {
+    try {
         String lowerCategory = category.toLowerCase();
-        return productService.getAllProducts().stream()
+        List<Product> products = productService.getAllProducts().stream()
             .filter(p -> p.getQuantity() > 0 &&
                 p.getCategory() != null &&
                 p.getCategory().toLowerCase().equals(lowerCategory)
             )
             .toList();
+        
+        // Sử dụng bulk processing để lấy thông tin khuyến mại
+        Map<Long, Map<String, Object>> bulkDiscountInfo = promotionService.getBulkDiscountInfo(products);
+        
+        List<Map<String, Object>> productsWithPromotions = new ArrayList<>();
+        
+        for (Product product : products) {
+            Map<String, Object> productData = new HashMap<>();
+            productData.put("id", product.getId());
+            productData.put("name", product.getName());
+            productData.put("category", product.getCategory());
+            productData.put("quantity", product.getQuantity());
+            
+            // Lấy thông tin khuyến mại từ bulk result
+            Map<String, Object> discountInfo = bulkDiscountInfo.get(product.getId());
+            productData.put("originalPrice", discountInfo.get("originalPrice"));
+            productData.put("discountPercent", discountInfo.get("discountPercent"));
+            productData.put("discountedPrice", discountInfo.get("discountedPrice"));
+            productData.put("hasDiscount", discountInfo.get("hasDiscount"));
+            productData.put("discountSource", discountInfo.get("discountSource"));
+            
+            productsWithPromotions.add(productData);
+        }
+        
+        return ResponseEntity.ok(productsWithPromotions);
+    } catch (Exception e) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("success", false);
+        error.put("message", e.getMessage());
+        return ResponseEntity.badRequest().body(error);
     }
+}
 
     // ==================== CART MANAGEMENT ====================
 

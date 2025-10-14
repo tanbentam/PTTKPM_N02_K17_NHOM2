@@ -1242,35 +1242,35 @@ if (selectedCustomer && selectedCustomer.dateOfBirth) {
 
         // Category filter function
         function filterByCategory(category, buttonElement) {
-            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
-            buttonElement.classList.add('active');
+    document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+    buttonElement.classList.add('active');
 
-            const resultCount = document.getElementById('searchResultCount');
-            const noProductsDiv = document.getElementById('noProductsFound');
+    const resultCount = document.getElementById('searchResultCount');
+    const noProductsDiv = document.getElementById('noProductsFound');
 
-            if (category === '') {
-                loadAllProducts();
-                resultCount.style.display = 'none';
+    if (category === '') {
+        loadProductsWithPromotions(); // Sử dụng hàm có hỗ trợ khuyến mại
+        resultCount.style.display = 'none';
+        noProductsDiv.style.display = 'none';
+        return;
+    }
+
+    fetch(`/user/pos/search-by-category?category=${encodeURIComponent(category)}`)
+        .then(res => res.json())
+        .then(products => {
+            renderProductsWithPromotions(products); // Sử dụng hàm render có hỗ trợ khuyến mại
+            resultCount.style.display = 'block';
+            resultCount.textContent = `Tìm thấy ${products.length} sản phẩm trong danh mục "${category}"`;
+            if (products.length === 0) {
+                noProductsDiv.style.display = 'block';
+            } else {
                 noProductsDiv.style.display = 'none';
-                return;
             }
-
-            fetch(`/user/pos/search-by-category?category=${encodeURIComponent(category)}`)
-                .then(res => res.json())
-                .then(products => {
-                    renderProducts(products);
-                    resultCount.style.display = 'block';
-                    resultCount.textContent = `Tìm thấy ${products.length} sản phẩm trong danh mục "${category}"`;
-                    if (products.length === 0) {
-                        noProductsDiv.style.display = 'block';
-                    } else {
-                        noProductsDiv.style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    showAlert('Lỗi tải sản phẩm theo danh mục!', 'error');
-                });
-        }
+        })
+        .catch(error => {
+            showAlert('Lỗi tải sản phẩm theo danh mục!', 'error');
+        });
+}
 
         // Render products
         function renderProducts(products) {
@@ -1308,49 +1308,49 @@ if (selectedCustomer && selectedCustomer.dateOfBirth) {
 
         // Product search function
         function performProductSearch(searchTerm) {
-            if (searchTerm.trim() === '') {
-                clearSearch();
-                return;
-            }
+    if (searchTerm.trim() === '') {
+        clearSearch();
+        return;
+    }
 
-            fetch(`/user/pos/search?query=${encodeURIComponent(searchTerm)}`)
-                .then(res => res.json())
-                .then(products => {
-                    renderProducts(products);
-                    
-                    const resultCount = document.getElementById('searchResultCount');
-                    const noProductsDiv = document.getElementById('noProductsFound');
-                    
-                    resultCount.style.display = 'block';
-                    resultCount.textContent = `Tìm thấy ${products.length} sản phẩm cho "${searchTerm}"`;
-                    
-                    if (products.length === 0) {
-                        noProductsDiv.style.display = 'block';
-                    } else {
-                        noProductsDiv.style.display = 'none';
-                    }
-                    
-                    // Reset category filter
-                    document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
-                })
-                .catch(error => {
-                    showAlert('Lỗi tìm kiếm sản phẩm!', 'error');
-                });
-        }
-
-        // Clear search function
-        function clearSearch() {
-            document.getElementById('searchProduct').value = '';
-            document.getElementById('searchResultCount').style.display = 'none';
-            document.getElementById('noProductsFound').style.display = 'none';
+    fetch(`/user/pos/search?query=${encodeURIComponent(searchTerm)}`)
+        .then(res => res.json())
+        .then(products => {
+            renderProductsWithPromotions(products); // Sử dụng hàm render có hỗ trợ khuyến mại
             
-            // Load all products
-            loadAllProducts();
+            const resultCount = document.getElementById('searchResultCount');
+            const noProductsDiv = document.getElementById('noProductsFound');
+            
+            resultCount.style.display = 'block';
+            resultCount.textContent = `Tìm thấy ${products.length} sản phẩm cho "${searchTerm}"`;
+            
+            if (products.length === 0) {
+                noProductsDiv.style.display = 'block';
+            } else {
+                noProductsDiv.style.display = 'none';
+            }
             
             // Reset category filter
             document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector('.category-btn[data-category=""]').classList.add('active');
-        }
+        })
+        .catch(error => {
+            showAlert('Lỗi tìm kiếm sản phẩm!', 'error');
+        });
+}
+
+        // Clear search function
+        function clearSearch() {
+    document.getElementById('searchProduct').value = '';
+    document.getElementById('searchResultCount').style.display = 'none';
+    document.getElementById('noProductsFound').style.display = 'none';
+    
+    // Load all products with promotions
+    loadProductsWithPromotions(); // Sử dụng hàm có hỗ trợ khuyến mại
+    
+    // Reset category filter
+    document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.category-btn[data-category=""]').classList.add('active');
+}
 
         // ==================== UTILITY FUNCTIONS ====================
 
@@ -1543,60 +1543,72 @@ if (selectedCustomer && selectedCustomer.dateOfBirth) {
         
         // Render products with promotion info
         function renderProductsWithPromotions(products) {
-            const productGrid = document.querySelector('#productGrid .row');
-            productGrid.innerHTML = '';
-            
-            if (products.length === 0) {
-                document.getElementById('noProductsFound').style.display = 'block';
-                return;
-            }
-            
-            document.getElementById('noProductsFound').style.display = 'none';
-            
-            products.forEach(product => {
-                const outOfStock = product.quantity <= 0;
-                const hasDiscount = product.hasDiscount;
-                const discountPercent = product.discountPercent || 0;
-                const originalPrice = product.originalPrice;
-                const discountedPrice = product.discountedPrice;
-                
-                const productCard = `
-                    <div class="col-md-4">
-                        <div class="card product-card ${outOfStock ? 'out-of-stock' : ''}" 
-                             data-product-id="${product.id}"
-                             data-product-name="${product.name}"
-                             data-product-price="${discountedPrice}"
-                             data-product-original-price="${originalPrice}"
-                             data-product-discount="${discountPercent}"
-                             data-product-quantity="${product.quantity}"
-                             onclick="selectProduct(this)">
-                            ${hasDiscount ? `<div class="discount-badge">-${discountPercent.toFixed(0)}%</div>` : ''}
-                            <div class="card-body text-center">
-                                <i class="fas fa-box fa-2x text-primary mb-2"></i>
-                                <h6 class="card-title">${product.name}</h6>
-                                <p class="card-text">
-                                    <small class="text-muted">${product.category || ''}</small>
-                                </p>
-                                <div class="price-section mb-2">
-                                    ${hasDiscount ? `
-                                        <div class="original-price">${formatCurrency(originalPrice)}</div>
-                                        <div class="discount-price">${formatCurrency(discountedPrice)}</div>
-                                        <small class="text-success"><i class="fas fa-tag"></i> ${product.discountSource}</small>
-                                    ` : `
-                                        <div class="discount-price">${formatCurrency(originalPrice)}</div>
-                                    `}
-                                </div>
-                                <small class="text-muted">
-                                    <i class="fas fa-cubes"></i> Tồn: ${product.quantity}
-                                </small>
-                                ${outOfStock ? '<div class="badge bg-danger mt-2">Hết hàng</div>' : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-                productGrid.innerHTML += productCard;
-            });
+    const productGrid = document.querySelector('#productGrid .row');
+    productGrid.innerHTML = '';
+    
+    if (products.length === 0) {
+        document.getElementById('noProductsFound').style.display = 'block';
+        return;
+    }
+    
+    document.getElementById('noProductsFound').style.display = 'none';
+    
+    products.forEach(product => {
+        const outOfStock = product.quantity <= 0;
+        
+        // Xử lý cho cả 2 định dạng: với và không có khuyến mại
+        let hasDiscount = false;
+        let discountPercent = 0;
+        let originalPrice = product.price || product.originalPrice || 0;
+        let discountedPrice = product.price || product.discountedPrice || originalPrice;
+        let discountSource = '';
+        
+        // Nếu có thông tin khuyến mại
+        if (product.hasDiscount !== undefined) {
+            hasDiscount = product.hasDiscount;
+            discountPercent = product.discountPercent || 0;
+            originalPrice = product.originalPrice || discountedPrice;
+            discountedPrice = product.discountedPrice || originalPrice;
+            discountSource = product.discountSource || '';
         }
+        
+        const productCard = `
+            <div class="col-md-4">
+                <div class="card product-card ${outOfStock ? 'out-of-stock' : ''}" 
+                     data-product-id="${product.id}"
+                     data-product-name="${product.name}"
+                     data-product-price="${discountedPrice}"
+                     data-product-original-price="${originalPrice}"
+                     data-product-discount="${discountPercent}"
+                     data-product-quantity="${product.quantity}"
+                     onclick="selectProduct(this)">
+                    ${hasDiscount ? `<div class="discount-badge">-${discountPercent.toFixed(0)}%</div>` : ''}
+                    <div class="card-body text-center">
+                        <i class="fas fa-box fa-2x text-primary mb-2"></i>
+                        <h6 class="card-title">${product.name}</h6>
+                        <p class="card-text">
+                            <small class="text-muted">${product.category || ''}</small>
+                        </p>
+                        <div class="price-section mb-2">
+                            ${hasDiscount ? `
+                                <div class="original-price">${formatCurrency(originalPrice)}</div>
+                                <div class="discount-price">${formatCurrency(discountedPrice)}</div>
+                                <small class="text-success"><i class="fas fa-tag"></i> ${discountSource}</small>
+                            ` : `
+                                <div class="discount-price">${formatCurrency(originalPrice)}</div>
+                            `}
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-cubes"></i> Tồn: ${product.quantity}
+                        </small>
+                        ${outOfStock ? '<div class="badge bg-danger mt-2">Hết hàng</div>' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        productGrid.innerHTML += productCard;
+    });
+}
         
         // Override the original DOMContentLoaded to include promotions
         document.addEventListener('DOMContentLoaded', function() {

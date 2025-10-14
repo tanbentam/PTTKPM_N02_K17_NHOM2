@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Lịch Sử Giao Dịch</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+    <!-- Thay thế phần style cũ bằng đoạn này -->
+<style>
+    .search-bar { margin-bottom: 24px; }
+    .table th, .table td { vertical-align: middle; }
+    .btn-back-pos {
+        position: absolute;
+        top: 24px;
+        left: 24px;
+        z-index: 10;
+    }
+    .pagination-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 20px 0;
+    }
+    .modal-backdrop.fade { opacity: 0.5; }
+
+    /* Progress Steps */
+    .steps {
+        display: flex;
+        justify-content: space-between;
+        position: relative;
+        margin-bottom: 30px;
+    }
+
+    .step {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        position: relative;
+        background: #f8f9fa;
+    }
+
+    .step:not(:last-child):after {
+        content: '';
+        position: absolute;
+        right: -15px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 30px;
+        height: 2px;
+        background: #dee2e6;
+    }
+
+    .step.active {
+        background: #007bff;
+        color: white;
+    }
+
+    .step-number {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        border-radius: 50%;
+        background: #fff;
+        color: #007bff;
+        font-weight: bold;
+        margin-right: 10px;
+    }
+
+    .step.active .step-number {
+        background: #fff;
+        color: #007bff;
+    }
+
+    /* Product Cards */
+    .product-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+    }
+
+    .product-card {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+
+    .product-card:hover {
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .product-card.selected {
+        border-color: #28a745;
+        background-color: #f8f9fa;
+    }
+
+    /* Quantity Controls */
+    .quantity-control {
+        width: 120px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .quantity-control button {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Summary Card */
+    .summary-card {
+        background: #f8f9fa;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+
+    /* Request Type Cards */
+    .request-type-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+
+    .request-type-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .request-type-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+
+    /* Existing styles */
+    .selected-items {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .badge {
+        font-size: 0.9em;
+        padding: 0.5em 0.7em;
+    }
+    
+    .required::after {
+        content: " *";
+        color: red;
+    }
+    
+    .product-item {
+        border-bottom: 1px solid #eee;
+        padding: 10px 0;
+    }
+    
+    .product-item:last-child {
+        border-bottom: none;
+    }
+
+    @media (max-width: 768px) {
+        .btn-back-pos { top: 8px; left: 8px; }
+        .pagination-info { flex-direction: column; gap: 10px; }
+        .steps { flex-direction: column; }
+        .step:not(:last-child):after {
+            width: 2px;
+            height: 20px;
+            right: 50%;
+            top: 100%;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="container mt-4 position-relative">
+    <a href="/user/pos" class="btn btn-primary btn-back-pos">
+        <i class="fas fa-arrow-left"></i> Quay lại POS
+    </a>
+    <h2 class="mb-4 text-center">Lịch Sử Giao Dịch</h2>
+    
+    <!-- Search Bar -->
+    <form class="row search-bar" method="get" th:action="@{/user/pos/history}" id="searchForm">
+        <div class="col-md-2 mb-2 mb-md-0">
+            <input type="date" class="form-control" name="date" th:value="${param.date}">
+        </div>
+        <div class="col-md-3 mb-2 mb-md-0">
+            <input type="text" class="form-control" name="customerName" 
+                   placeholder="Tìm theo tên khách hàng..." th:value="${param.customerName}">
+        </div>
+        <div class="col-md-2 mb-2 mb-md-0">
+            <input type="text" class="form-control" name="cashier" 
+                   placeholder="Thu ngân..." th:value="${param.cashier}">
+        </div>
+        <div class="col-md-2 mb-2 mb-md-0">
+            <select class="form-control" name="size">
+                <option value="5" th:selected="${param.size == '5'}">5/trang</option>
+                <option value="10" th:selected="${param.size == '10'}">10/trang</option>
+                <option value="20" th:selected="${param.size == '20'}">20/trang</option>
+                <option value="50" th:selected="${param.size == '50'}">50/trang</option>
+            </select>
+        </div>
+        <div class="col-md-2 mb-2 mb-md-0">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-search"></i> Tìm kiếm
+            </button>
+        </div>
+        <div class="col-md-1">
+            <button type="button" onclick="resetForm()" class="btn btn-secondary w-100">Reset</button>
+        </div>
+    </form>
+    
+    <script>
+        function resetForm() {
+            document.getElementById('searchForm').reset();
+            window.location.href = '[[@{/user/pos/history}]]';
+        }
+    </script>
+
+    <!-- Pagination Info -->
+    <div class="pagination-info" th:if="${totalElements != null and totalElements > 0}">
+        <div class="info-text">
+            <span th:text="'Hiển thị ' + (${currentPage} * ${pageSize} + 1) + ' - ' + 
+                         (${currentPage} * ${pageSize} + ${orders.size()}) + 
+                         ' trong tổng số ' + ${totalElements} + ' đơn hàng'"></span>
+        </div>
+        <div class="page-size-info">
+            <span class="badge bg-info" th:text="${pageSize} + ' đơn/trang'"></span>
+        </div>
+    </div>
+    
+    <div th:if="${orders != null and !orders.isEmpty()}">
+        <table class="table table-hover table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>STT</th>
+                    <th>Mã đơn</th>
+                    <th>Ngày tạo</th>
+                    <th>Thu ngân</th>
+                    <th>Khách hàng</th>
+                    <th>Thành tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Đổi/Trả</th>
+                    <th>Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="order, iterStat : ${orders}">
+                    <td th:text="${currentPage * pageSize + iterStat.index + 1}"></td>
+                    <td th:text="${order.orderNumber != null ? order.orderNumber : '---'}"></td>
+                    <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm') : '---'}"></td>
+                    <td th:text="${order.createdBy != null ? order.createdBy : 'Admin'}"></td>
+                    <td th:text="${order.customer != null && order.customer.name != null ? order.customer.name : 'Khách lẻ'}"></td>
+                    <td th:text="${order.finalAmount != null ? #numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></td>
+                    <td>
+                        <span th:text="${order.status}"
+                              th:class="${'badge ' + 
+                                      (#strings.toString(order.status) == 'COMPLETED' ? 'bg-success' : 
+                                       #strings.toString(order.status) == 'PROCESSING_RETURN' ? 'bg-warning' :
+                                       #strings.toString(order.status) == 'PROCESSING_EXCHANGE' ? 'bg-info' : 
+                                       'bg-secondary')}"></span>
+                    </td>
+                    <td>
+                        <button th:if="${order.status.name() == 'COMPLETED'}" 
+                                class="btn btn-sm btn-primary" 
+                                onclick="showReturnExchangeModal(this)"
+                                th:data-order-id="${order.id}"
+                                th:data-order-number="${order.orderNumber}">
+                            <i class="fas fa-exchange-alt"></i> Đổi/Trả
+                        </button>
+                        <button th:if="${order.status.name() == 'PROCESSING_RETURN' || order.status.name() == 'PROCESSING_EXCHANGE'}"
+                                class="btn btn-sm btn-outline-info" 
+                                onclick="showRequestStatus(this)"
+                                th:data-order-id="${order.id}">
+                            <i class="fas fa-clock"></i> Xem trạng thái
+                        </button>
+                        <span th:if="${order.status.name() != 'COMPLETED' && order.status.name() != 'PROCESSING_RETURN' && order.status.name() != 'PROCESSING_EXCHANGE'}"
+                              class="text-muted">---</span>
+
+                        <!-- Modal Đổi/Trả Hàng -->
+                        <!-- Modal Đổi/Trả Hàng -->
+<div class="modal fade" id="returnExchangeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Tạo yêu cầu đổi/trả hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Progress Steps -->
+                <div class="steps mb-4">
+                    <div class="step active" id="step1">
+                        <span class="step-number">1</span>
+                        <span class="step-text">Chọn loại yêu cầu</span>
+                    </div>
+                    <div class="step" id="step2">
+                        <span class="step-number">2</span>
+                        <span class="step-text">Chọn sản phẩm</span>
+                    </div>
+                    <div class="step" id="step3">
+                        <span class="step-number">3</span>
+                        <span class="step-text">Xác nhận</span>
+                    </div>
+                </div>
+
+                <form id="returnExchangeForm">
+                    <!-- Step 1: Select Request Type -->
+                    <div class="step-content" id="step1Content">
+                        <div class="mb-3">
+                            <label class="form-label required">Chọn loại yêu cầu</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card request-type-card" onclick="selectRequestType('RETURN')">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-undo fa-3x mb-3"></i>
+                                            <h5>Trả hàng</h5>
+                                            <p class="text-muted">Hoàn trả sản phẩm và nhận lại tiền</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card request-type-card" onclick="selectRequestType('EXCHANGE')">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-exchange-alt fa-3x mb-3"></i>
+                                            <h5>Đổi hàng</h5>
+                                            <p class="text-muted">Đổi sang sản phẩm khác</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Product Selection -->
+                    <div class="step-content" id="step2Content" style="display:none">
+                        <!-- Original Products Section -->
+                        <div class="mb-4">
+                            <h5>Sản phẩm muốn đổi/trả</h5>
+                            <div id="orderItems" class="product-list">
+                                <!-- Products will be loaded here dynamically -->
+                            </div>
+                            <div class="total-section mt-3">
+                                <h6>Tổng giá trị đổi/trả: <span id="returnTotal">0 VNĐ</span></h6>
+                            </div>
+                        </div>
+
+                        <!-- Exchange Products Section -->
+                        <div id="exchangeSection" style="display:none">
+                            <h5>Sản phẩm muốn đổi sang</h5>
+                            <div class="search-box mb-3">
+                                <input type="text" class="form-control" id="productSearch" 
+                                       placeholder="Tìm kiếm sản phẩm...">
+                            </div>
+                            <div id="exchangeProducts" class="product-list">
+                                <!-- Available products will be loaded here -->
+                            </div>
+                            <div class="total-section mt-3">
+                                <h6>Tổng giá trị đổi mới: <span id="exchangeTotal">0 VNĐ</span></h6>
+                                <div id="exchangeWarning"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Confirmation -->
+                    <div class="step-content" id="step3Content" style="display:none">
+                        <div class="mb-3">
+                            <label class="form-label required">Lý do đổi/trả</label>
+                            <textarea class="form-control" id="reason" rows="3" required
+                                    placeholder="Vui lòng mô tả chi tiết tình trạng sản phẩm..."></textarea>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="conditionCheck" required>
+                            <label class="form-check-label" for="conditionCheck">
+                                Tôi xác nhận sản phẩm còn mới và chưa sử dụng
+                            </label>
+                        </div>
+                        <div class="summary-card">
+                            <h6>Thông tin yêu cầu</h6>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Loại yêu cầu:</dt>
+                                <dd class="col-sm-8" id="summaryRequestType"></dd>
+                                <dt class="col-sm-4">Sản phẩm đổi/trả:</dt>
+                                <dd class="col-sm-8" id="summaryProducts"></dd>
+                                <dt class="col-sm-4">Tổng giá trị:</dt>
+                                <dd class="col-sm-8" id="summaryTotal"></dd>
+                            </dl>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="prevButton" onclick="previousStep()" style="display:none">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                </button>
+                <button type="button" class="btn btn-primary" id="nextButton" onclick="nextStep()">
+                    Tiếp tục <i class="fas fa-arrow-right"></i>
+                </button>
+                <button type="button" class="btn btn-success" id="submitButton" onclick="submitRequest()" style="display:none">
+                    <i class="fas fa-check"></i> Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+                        <a th:href="@{'/user/pos/historyoder?id=' + ${order.id}}" class="btn btn-sm btn-info">
+                            <i class="fas fa-file-invoice"></i> Xem
+                        </a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Pagination Navigation -->
+        <nav aria-label="Page navigation" th:if="${totalPages > 1}">
+            <ul class="pagination justify-content-center">
+                <!-- Previous page -->
+                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                    <a class="page-link" 
+                       th:href="@{/user/pos/history(page=${currentPage - 1}, size=${pageSize}, date=${date}, customerName=${customerName}, cashier=${cashier})}"
+                       th:if="${currentPage > 0}">
+                        <i class="fas fa-chevron-left"></i> Trước
+                    </a>
+                    <span class="page-link" th:if="${currentPage == 0}">
+                        <i class="fas fa-chevron-left"></i> Trước
+                    </span>
+                </li>
+
+                <!-- Page numbers -->
+                <li class="page-item" 
+                    th:each="pageNum : ${#numbers.sequence(0, totalPages - 1)}"
+                    th:classappend="${pageNum == currentPage} ? 'active'">
+                    <a class="page-link" 
+                       th:href="@{/user/pos/history(page=${pageNum}, size=${pageSize}, date=${date}, customerName=${customerName}, cashier=${cashier})}"
+                       th:text="${pageNum + 1}"></a>
+                </li>
+
+                <!-- Next page -->
+                <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                    <a class="page-link" 
+                       th:href="@{/user/pos/history(page=${currentPage + 1}, size=${pageSize}, date=${date}, customerName=${customerName}, cashier=${cashier})}"
+                       th:if="${currentPage < totalPages - 1}">
+                        Sau <i class="fas fa-chevron-right"></i>
+                    </a>
+                    <span class="page-link" th:if="${currentPage == totalPages - 1}">
+                        Sau <i class="fas fa-chevron-right"></i>
+                    </span>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    
+    <div th:if="${orders == null or orders.isEmpty()}" class="alert alert-info mt-4 text-center">
+        <i class="fas fa-info-circle"></i> Không tìm thấy đơn hàng nào phù hợp với tiêu chí tìm kiếm.
+    </div>
+</div>
+
+
+    <!-- Request Status Modal -->
+    <div class="modal fade" id="requestStatusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Trạng thái yêu cầu đổi/trả</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="requestStatusContent">
+                    <!-- Status content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function validateQuantity(input, max) {
+            let value = parseInt(input.value);
+            if (isNaN(value) || value < 1) {
+                input.value = 1;
+                value = 1;
+            } else if (value > max) {
+                input.value = max;
+                value = max;
+            }
+            updateTotalAmount();
+        }
+
+        function updateTotalAmount() {
+            let totalAmount = 0;
+            document.querySelectorAll('input[name="selectedItems"]:checked').forEach(checkbox => {
+                const card = checkbox.closest('.card-body');
+                const quantity = parseInt(card.querySelector('.quantity-input').value);
+                const price = parseFloat(card.getAttribute('data-price'));
+                totalAmount += quantity * price;
+            });
+
+            const totalAmountElement = document.getElementById('totalAmount');
+            if (totalAmountElement) {
+                totalAmountElement.textContent = totalAmount.toLocaleString() + ' VNĐ';
+            }
+        }
+
+        function showReturnExchangeModal(button) {
+            const orderId = button.getAttribute('data-order-id');
+            const orderNumber = button.getAttribute('data-order-number');
+            
+            // Reset form và hiển thị modal
+            const modal = new bootstrap.Modal(document.getElementById('returnExchangeModal'));
+            document.getElementById('orderId').value = orderId;
+            document.getElementById('requestType').value = 'RETURN';
+            document.getElementById('reason').value = '';
+            document.getElementById('exchangeSection').style.display = 'none';
+            
+            // Thêm thông tin đơn hàng vào tiêu đề modal
+            document.querySelector('#returnExchangeModal .modal-title').innerHTML = 
+                `Tạo yêu cầu đổi/trả hàng <br><small class="text-muted">Đơn hàng #${orderNumber}</small>`;
+            
+            // Load order items
+            fetch(`/user/orders/${orderId}`)
+                .then(response => response.json())
+                .then(order => {
+                    const itemsContainer = document.getElementById('orderItems');
+                    itemsContainer.innerHTML = `
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle"></i> Chọn một hoặc nhiều sản phẩm muốn đổi/trả từ đơn hàng
+                        </div>
+                        ${order.items.map(item => `
+                            <div class="product-item">
+                                <div class="card mb-2">
+                                    <div class="card-body" data-price="${item.price}">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input product-checkbox" type="checkbox" 
+                                                   name="selectedItems" value="${item.id}"
+                                                   data-quantity="${item.quantity}">
+                                            <label class="form-check-label">
+                                                <strong>${item.product.name}</strong>
+                                                <div class="text-muted mt-1">
+                                                    <div>Số lượng đã mua: ${item.quantity}</div>
+                                                    <div>Đơn giá: ${item.price.toLocaleString()} VNĐ</div>
+                                                    <div>Thành tiền: ${(item.price * item.quantity).toLocaleString()} VNĐ</div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <div class="quantity-section" style="display: none;">
+                                            <hr>
+                                            <div class="mt-2">
+                                                <label class="form-label">Số lượng muốn đổi/trả:</label>
+                                                <div class="d-flex align-items-center">
+                                                    <input type="number" class="form-control quantity-input quantity-control"
+                                                           min="1" max="${item.quantity}" value="1"
+                                                           onchange="validateQuantity(this, ${item.quantity})">
+                                                    <span class="ms-2">/ ${item.quantity}</span>
+                                                    <div class="ms-3">
+                                                        <span class="badge bg-primary item-total-amount">
+                                                            ${item.price.toLocaleString()} VNĐ
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}`;
+
+                    // Add total amount section
+                    itemsContainer.insertAdjacentHTML('afterend', `
+                        <div class="mt-3 border-top pt-3">
+                            <h6>Tổng giá trị đổi/trả: <span id="totalAmount">0 VNĐ</span></h6>
+                        </div>
+                    `);
+
+                    // Show quantity inputs when items are checked
+                    document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                        checkbox.addEventListener('change', function() {
+                            const quantitySection = this.closest('.card-body').querySelector('.quantity-section');
+                            quantitySection.style.display = this.checked ? 'block' : 'none';
+                            updateExchangeTotal();
+                        });
+                    });
+
+                    // Add event listeners for quantity changes
+                    document.querySelectorAll('.quantity-input').forEach(input => {
+                        input.addEventListener('change', () => updateExchangeTotal());
+                    });
+
+                    // Add event listeners for product selection
+                    document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                        checkbox.addEventListener('change', function() {
+                            const requestType = document.getElementById('requestType').value;
+                            if (requestType === 'RETURN') {
+                                // If this checkbox is being checked
+                                if (this.checked) {
+                                    // Uncheck all other checkboxes
+                                    document.querySelectorAll('.product-checkbox').forEach(otherCheckbox => {
+                                        if (otherCheckbox !== this) {
+                                            otherCheckbox.checked = false;
+                                            const quantitySection = otherCheckbox.closest('.card-body').querySelector('.quantity-section');
+                                            if (quantitySection) {
+                                                quantitySection.style.display = 'none';
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                            // Show/hide quantity section
+                            const quantitySection = this.closest('.card-body').querySelector('.quantity-section');
+                            if (quantitySection) {
+                                quantitySection.style.display = this.checked ? 'block' : 'none';
+                            }
+                            updateExchangeTotal();
+                        });
+                    });
+                });
+
+            // Show modal
+            new bootstrap.Modal(document.getElementById('returnExchangeModal')).show();
+        }
+
+        // Toggle exchange product section based on request type
+        document.getElementById('requestType').addEventListener('change', function(e) {
+            const exchangeSection = document.getElementById('exchangeSection');
+            exchangeSection.style.display = e.target.value === 'EXCHANGE' ? 'block' : 'none';
+            
+            if (e.target.value === 'EXCHANGE') {
+                loadExchangeProducts();
+            }
+        });
+
+        function loadExchangeProducts() {
+            fetch('/user/products/available')
+                .then(response => response.json())
+                .then(products => {
+                    const productsContainer = document.getElementById('exchangeProducts');
+                    productsContainer.innerHTML = `
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-exclamation-triangle"></i> Chọn sản phẩm và số lượng muốn đổi. Tổng giá trị phải lớn hơn hoặc bằng giá trị sản phẩm đổi/trả.
+                        </div>
+                        ${products.map(product => `
+                            <div class="product-item">
+                                <div class="card mb-2">
+                                    <div class="card-body" data-price="${product.price}">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input exchange-checkbox" type="checkbox" 
+                                                   name="exchangeProducts" value="${product.id}"
+                                                   data-quantity="${product.quantity}">
+                                            <label class="form-check-label">
+                                                <strong>${product.name}</strong>
+                                                <div class="text-muted mt-1">
+                                                    <div>Tồn kho: ${product.quantity}</div>
+                                                    <div>Giá: ${product.price.toLocaleString()} VNĐ</div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <div class="quantity-section" style="display: none;">
+                                            <hr>
+                                            <div class="mt-2">
+                                                <label class="form-label">Số lượng muốn đổi:</label>
+                                                <div class="d-flex align-items-center">
+                                                    <input type="number" class="form-control exchange-quantity quantity-control"
+                                                           min="1" max="${product.quantity}" value="1"
+                                                           onchange="validateQuantity(this, ${product.quantity})">
+                                                    <span class="ms-2">/ ${product.quantity}</span>
+                                                    <div class="ms-3">
+                                                        <span class="badge bg-success exchange-item-total">
+                                                            ${product.price.toLocaleString()} VNĐ
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}`;
+                        
+
+                    // Show quantity inputs when products are selected
+                    document.querySelectorAll('.exchange-checkbox').forEach(checkbox => {
+                        checkbox.addEventListener('change', function() {
+                            const quantitySection = this.closest('.card-body').querySelector('.quantity-section');
+                            quantitySection.style.display = this.checked ? 'block' : 'none';
+                            updateExchangeTotal();
+                        });
+                    });
+                    
+                    // Add event listeners for exchange quantity changes
+                    document.querySelectorAll('.exchange-quantity').forEach(input => {
+                        input.addEventListener('change', () => updateExchangeTotal());
+                    });
+                });
+        }
+
+        function calculateTotalValue(items, type = 'return') {
+            let total = 0;
+            items.forEach(item => {
+                const card = item.closest('.card-body');
+                const quantity = parseInt(card.querySelector(type === 'return' ? '.quantity-input' : '.exchange-quantity').value || 0);
+                const price = parseFloat(card.getAttribute('data-price'));
+                const itemTotal = quantity * price;
+                total += itemTotal;
+
+                // Cập nhật hiển thị tổng tiền cho từng item
+                const totalElement = card.querySelector(type === 'return' ? '.item-total-amount' : '.exchange-item-total');
+                if (totalElement) {
+                    totalElement.textContent = itemTotal.toLocaleString() + ' VNĐ';
+                }
+            });
+            return total;
+        }
+
+        function handleRequestTypeChange() {
+            const requestType = document.getElementById('requestType').value;
+            const returnConditions = document.getElementById('returnConditions');
+            const exchangeConditions = document.getElementById('exchangeConditions');
+            const exchangeSection = document.getElementById('exchangeSection');
+            const conditionCheck = document.getElementById('conditionCheck');
+
+            // Reset all checkboxes
+            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+                const quantitySection = checkbox.closest('.card-body').querySelector('.quantity-section');
+                if (quantitySection) {
+                    quantitySection.style.display = 'none';
+                }
+            });
+
+            // Show/hide relevant sections
+            returnConditions.style.display = requestType === 'RETURN' ? 'block' : 'none';
+            exchangeConditions.style.display = requestType === 'EXCHANGE' ? 'block' : 'none';
+            exchangeSection.style.display = requestType === 'EXCHANGE' ? 'block' : 'none';
+            
+            // Reset reason and condition
+            document.getElementById('reason').value = '';
+            conditionCheck.checked = false;
+
+            updateExchangeTotal();
+        }
+
+        function validateForm() {
+            const requestType = document.getElementById('requestType').value;
+            const reason = document.getElementById('reason').value.trim();
+            const selectedItems = document.querySelectorAll('input[name="selectedItems"]:checked');
+            const conditionCheck = document.getElementById('conditionCheck');
+
+            if (!conditionCheck.checked) {
+                alert('Vui lòng xác nhận điều kiện về tình trạng sản phẩm');
+                return false;
+            }
+
+            if (!reason) {
+                alert('Vui lòng mô tả chi tiết tình trạng sản phẩm');
+                return false;
+            }
+
+            if (selectedItems.length === 0) {
+                alert('Vui lòng chọn sản phẩm để đổi/trả');
+                return false;
+            }
+
+            if (requestType === 'RETURN' && selectedItems.length > 1) {
+                alert('Chỉ được chọn một sản phẩm để trả');
+                return false;
+            }
+
+            if (requestType === 'EXCHANGE') {
+                const exchangeProducts = document.querySelectorAll('input[name="exchangeProducts"]:checked');
+                if (exchangeProducts.length === 0) {
+                    alert('Vui lòng chọn ít nhất một sản phẩm để đổi');
+                    return false;
+                }
+
+                // Tính tổng giá trị đơn hàng cũ và mới
+                const oldTotal = calculateTotalValue(selectedItems);
+                const newTotal = calculateTotalValue(exchangeProducts);
+
+                if (newTotal < oldTotal) {
+                    alert('Tổng giá trị sản phẩm đổi mới (' + newTotal.toLocaleString() + ' VNĐ) phải lớn hơn hoặc bằng giá trị sản phẩm đổi cũ (' + oldTotal.toLocaleString() + ' VNĐ)');
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Cập nhật hiển thị tổng giá trị khi thay đổi số lượng hoặc chọn sản phẩm
+        function updateExchangeTotal() {
+            const selectedItems = document.querySelectorAll('input[name="selectedItems"]:checked');
+            const exchangeProducts = document.querySelectorAll('input[name="exchangeProducts"]:checked');
+            
+            const oldTotal = calculateTotalValue(selectedItems, 'return');
+            const newTotal = calculateTotalValue(exchangeProducts, 'exchange');
+
+            // Cập nhật hiển thị số lượng items được chọn
+            const returnItemsCount = selectedItems.length;
+            const exchangeItemsCount = exchangeProducts.length;
+            
+            // Cập nhật hiển thị tổng và thông tin chi tiết
+            const returnTotalElement = document.getElementById('returnTotal');
+            const exchangeTotalElement = document.getElementById('exchangeTotal');
+            const returnInfoElement = document.getElementById('returnInfo');
+            const exchangeInfoElement = document.getElementById('exchangeInfo');
+            const warningElement = document.getElementById('exchangeWarning');
+
+            // Cập nhật thông tin đổi/trả
+            returnTotalElement.textContent = oldTotal.toLocaleString() + ' VNĐ';
+            returnInfoElement.innerHTML = returnItemsCount > 0 
+                ? `<div class="text-muted">Đã chọn ${returnItemsCount} sản phẩm để đổi/trả</div>`
+                : '<div class="text-muted">Chưa chọn sản phẩm nào</div>';
+
+            // Cập nhật thông tin đổi mới
+            if (document.getElementById('requestType').value === 'EXCHANGE') {
+                exchangeTotalElement.textContent = newTotal.toLocaleString() + ' VNĐ';
+                exchangeInfoElement.innerHTML = exchangeItemsCount > 0
+                    ? `<div class="text-muted">Đã chọn ${exchangeItemsCount} sản phẩm để đổi mới</div>`
+                    : '<div class="text-muted">Chưa chọn sản phẩm nào</div>';
+                
+                // Hiển thị cảnh báo về giá trị
+                if (oldTotal === 0) {
+                    warningElement.innerHTML = '<i class="fas fa-info-circle"></i> Bước 1: Vui lòng chọn sản phẩm muốn đổi/trả';
+                    warningElement.className = 'alert alert-info mt-2';
+                } else if (newTotal === 0) {
+                    warningElement.innerHTML = '<i class="fas fa-info-circle"></i> Bước 2: Vui lòng chọn sản phẩm muốn đổi mới';
+                    warningElement.className = 'alert alert-info mt-2';
+                } else if (newTotal < oldTotal) {
+                    warningElement.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div><strong>Không thể đổi hàng</strong></div>
+                        <div>Giá trị sản phẩm đổi mới (${newTotal.toLocaleString()} VNĐ)</div>
+                        <div>phải lớn hơn hoặc bằng</div>
+                        <div>Giá trị sản phẩm đổi/trả (${oldTotal.toLocaleString()} VNĐ)</div>
+                    `;
+                    warningElement.className = 'alert alert-danger mt-2';
+                } else {
+                    warningElement.innerHTML = `
+                        <i class="fas fa-check-circle"></i>
+                        <div><strong>Có thể đổi hàng</strong></div>
+                        <div>Giá trị sản phẩm đổi mới: ${newTotal.toLocaleString()} VNĐ</div>
+                        <div>Giá trị sản phẩm đổi/trả: ${oldTotal.toLocaleString()} VNĐ</div>
+                    `;
+                    warningElement.className = 'alert alert-success mt-2';
+                }
+            } else {
+                // Ẩn thông tin đổi hàng nếu là trả hàng
+                exchangeTotalElement.textContent = '0 VNĐ';
+                exchangeInfoElement.innerHTML = '';
+                warningElement.innerHTML = oldTotal === 0
+                    ? '<i class="fas fa-info-circle"></i> Vui lòng chọn sản phẩm muốn trả'
+                    : `<i class="fas fa-check-circle"></i> Đã chọn ${returnItemsCount} sản phẩm để trả`;
+                warningElement.className = oldTotal === 0 ? 'alert alert-info mt-2' : 'alert alert-success mt-2';
+            }
+        }
+
+        function submitRequest() {
+            if (!validateForm()) {
+                return;
+            }
+
+            const orderId = document.getElementById('orderId').value;
+            const requestType = document.getElementById('requestType').value;
+            const reason = document.getElementById('reason').value;
+
+            // Get selected items and their quantities
+            const selectedItems = [];
+            document.querySelectorAll('input[name="selectedItems"]:checked').forEach(checkbox => {
+                const quantityInput = checkbox.closest('.card-body').querySelector('.quantity-input');
+                selectedItems.push({
+                    id: checkbox.value,
+                    quantity: parseInt(quantityInput.value)
+                });
+            });
+
+            let requestData = {
+                orderId: orderId,
+                type: requestType,
+                reason: reason,
+                items: selectedItems
+            };
+
+            // Add exchange products if type is EXCHANGE
+            if (requestType === 'EXCHANGE') {
+                const exchangeProducts = [];
+                document.querySelectorAll('input[name="exchangeProducts"]:checked').forEach(checkbox => {
+                    const quantityInput = checkbox.closest('.card-body').querySelector('.exchange-quantity');
+                    exchangeProducts.push({
+                        id: checkbox.value,
+                        quantity: parseInt(quantityInput.value)
+                    });
+                });
+                requestData.exchangeProducts = exchangeProducts;
+            }
+
+            // Submit request
+            fetch('/user/returns/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.content
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(result => {
+                if (result.success) {
+                    alert('Yêu cầu đổi/trả hàng đã được tạo thành công');
+                    location.reload();
+                } else {
+                    alert('Có lỗi xảy ra: ' + (result.message || 'Không thể tạo yêu cầu'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.');
+            });
+        }
+
+        function showRequestStatus(button) {
+            const orderId = button.getAttribute('data-order-id');
+            
+            fetch(`/user/returns/status/${orderId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(request => {
+                    const statusContent = document.getElementById('requestStatusContent');
+                    statusContent.innerHTML = `
+                        <dl class="row">
+                            <dt class="col-sm-4">Loại yêu cầu:</dt>
+                            <dd class="col-sm-8">${request.type === 'RETURN' ? 'Trả hàng' : 'Đổi hàng'}</dd>
+
+                            <dt class="col-sm-4">Trạng thái:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-${getStatusBadgeClass(request.status)}">
+                                    ${getStatusText(request.status)}
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-4">Ngày tạo:</dt>
+                            <dd class="col-sm-8">${new Date(request.createdAt).toLocaleString('vi-VN')}</dd>
+
+                            <dt class="col-sm-4">Lý do:</dt>
+                            <dd class="col-sm-8">${request.reason}</dd>
+
+                            ${request.rejectionReason ? `
+                                <dt class="col-sm-4">Lý do từ chối:</dt>
+                                <dd class="col-sm-8">${request.rejectionReason}</dd>
+                            ` : ''}
+                        </dl>
+
+                        <h6 class="mt-3">Sản phẩm đổi/trả:</h6>
+                        <ul class="list-group">
+                            ${request.items.map(item => `
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div>${item.product.name}</div>
+                                        <small class="text-muted">Số lượng: ${item.quantity}</small>
+                                    </div>
+                                    <span>${(item.price * item.quantity).toLocaleString('vi-VN')} VNĐ</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+
+                        ${request.type === 'EXCHANGE' && request.exchangeProducts ? `
+                            <h6 class="mt-3">Sản phẩm đổi sang:</h6>
+                            <ul class="list-group">
+                                ${request.exchangeProducts.map(item => `
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div>${item.product.name}</div>
+                                            <small class="text-muted">Số lượng: ${item.quantity}</small>
+                                        </div>
+                                        <span>${(item.price * item.quantity).toLocaleString('vi-VN')} VNĐ</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        ` : ''}
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Không thể tải thông tin yêu cầu. Vui lòng thử lại sau.');
+                });
+
+            new bootstrap.Modal(document.getElementById('requestStatusModal')).show();
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'PENDING': 'Chờ duyệt',
+                'APPROVED': 'Đã duyệt',
+                'REJECTED': 'Đã từ chối',
+                'PROCESSING': 'Đang xử lý',
+                'COMPLETED': 'Hoàn thành',
+                'CANCELLED': 'Đã hủy'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getStatusBadgeClass(status) {
+            const classMap = {
+                'PENDING': 'warning',
+                'APPROVED': 'success',
+                'REJECTED': 'danger',
+                'PROCESSING': 'info',
+                'COMPLETED': 'primary',
+                'CANCELLED': 'secondary'
+            };
+            return classMap[status] || 'secondary';
+        }
+    </script>
+</body>
+</html>

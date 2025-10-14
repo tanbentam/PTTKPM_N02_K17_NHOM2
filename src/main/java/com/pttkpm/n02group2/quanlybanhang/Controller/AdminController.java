@@ -1,0 +1,354 @@
+package com.pttkpm.n02group2.quanlybanhang.Controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import com.pttkpm.n02group2.quanlybanhang.Model.Customer;
+import com.pttkpm.n02group2.quanlybanhang.Model.Order;
+import com.pttkpm.n02group2.quanlybanhang.Model.OrderItem;
+import com.pttkpm.n02group2.quanlybanhang.Model.User;
+import com.pttkpm.n02group2.quanlybanhang.Service.CustomerService;
+import com.pttkpm.n02group2.quanlybanhang.Service.OrderService;
+import com.pttkpm.n02group2.quanlybanhang.Service.ProductService;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+import java.util.List;
+import jakarta.servlet.http.HttpSession;
+
+@Controller
+@RequestMapping("/admin")
+public class AdminController {
+    @Autowired
+    private CustomerService customerService;
+    @Autowired
+    private OrderService orderService;
+    @Autowired
+    private ProductService productService;
+
+    // ==================== DASHBOARD ====================
+    @GetMapping("/dashboard")
+    public String adminDashboard(Model model, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            return "redirect:/login";
+        }
+
+        try {
+            // Lấy username để hiển thị
+            model.addAttribute("username", user.getUsername());
+
+            // Lấy thống kê từ database
+            long totalProducts = productService.countAll();
+            long totalCustomers = customerService.countAll();
+            long totalOrders = orderService.countAll();
+            double totalRevenue = orderService.getTotalRevenue();
+
+            // Format doanh thu
+            String formattedRevenue = String.format("%,.0f", totalRevenue);
+
+            model.addAttribute("totalProducts", totalProducts);
+            model.addAttribute("totalCustomers", totalCustomers);
+            model.addAttribute("totalOrders", totalOrders);
+            model.addAttribute("totalRevenue", formattedRevenue);
+
+            return "admin/dashboard";
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Fallback nếu có lỗi
+            model.addAttribute("totalProducts", 0);
+            model.addAttribute("totalCustomers", 0);
+            model.addAttribute("totalOrders", 0);
+            model.addAttribute("totalRevenue", "0");
+            model.addAttribute("error", "Không thể tải thống kê: " + e.getMessage());
+            return "admin/dashboard";
+        }
+    }
+
+    // ==================== ORDERS ====================
+    @GetMapping("/orders")
+    public String adminOrders(
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) String customerName,
+            @RequestParam(required = false) String orderNumber,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Model model, 
+            HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            return "redirect:/login";
+        }
+
+        try {
+            // Tạo Pageable object cho phân trang
+            PageRequest pageRequest = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+            // Xử lý tìm kiếm
+            LocalDateTime startDate = null;
+            LocalDateTime endDate = null;
+            Order.OrderStatus orderStatus = null;
+
+            if (date != null && !date.isEmpty()) {
+                startDate = LocalDate.parse(date).atStartOfDay();
+                endDate = LocalDate.parse(date).atTime(23, 59, 59);
+            }
+
+            if (status != null && !status.isEmpty()) {
+                orderStatus = Order.OrderStatus.valueOf(status);
+            }
+
+            // Sử dụng Service để lấy danh sách đơn hàng có phân trang
+            Page<Order> ordersPage = orderService.findOrders(
+                orderStatus,
+                startDate,
+                endDate,
+                customerName,
+                orderNumber,
+                pageRequest);
+
+            // Thêm số liệu thống kê
+            long pendingCount = orderService.countByStatus(Order.OrderStatus.PENDING);
+            long exchangeCount = orderService.countByStatus(Order.OrderStatus.PROCESSING_EXCHANGE);
+            long returnCount = orderService.countByStatus(Order.OrderStatus.PROCESSING_RETURN);
+            long completedCount = orderService.countByStatus(Order.OrderStatus.COMPLETED);
+
+            model.addAttribute("pendingCount", pendingCount);
+            model.addAttribute("exchangeCount", exchangeCount);
+            model.addAttribute("returnCount", returnCount);
+            model.addAttribute("completedCount", completedCount);
+
+            // Thêm dữ liệu phân trang và tìm kiếm
+            model.addAttribute("orders", ordersPage.getContent());
+            model.addAttribute("currentPage", page);
+            model.addAttribute("totalPages", ordersPage.getTotalPages());
+            model.addAttribute("totalElements", ordersPage.getTotalElements());
+            model.addAttribute("pageSize", size);
+
+            // Giữ lại tham số tìm kiếm
+            model.addAttribute("date", date);
+            model.addAttribute("customerName", customerName);
+            model.addAttribute("orderNumber", orderNumber);
+            model.addAttribute("status", status);
+
+            // Thêm username vào model
+            model.addAttribute("username", user.getUsername());
+
+            return "admin/orders";
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("error", "Có lỗi xảy ra khi tải danh sách đơn hàng: " + e.getMessage());
+            return "admin/orders";
+        }
+    }
+
+    @GetMapping("/orders/{id}")
+    public String viewOrder(@PathVariable Long id, Model model, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            return "redirect:/login";
+        }
+
+        try {
+            Order order = orderService.findById(id);
+            if (order == null) {
+                return "redirect:/admin/customers";
+            }
+
+            Customer customer = order.getCustomer();
+
+            // Lấy danh sách sản phẩm đã mua
+            List<OrderItem> orderItems = order.getItems();
+
+            // Tính tổng tiền gốc từ các sản phẩm
+            double originalTotal = orderItems.stream()
+                .mapToDouble(item -> item.getQuantity() * item.getPrice())
+                .sum();
+
+            // Số tiền thực tế khách đã thanh toán (từ database)
+            double actualPaidAmount = order.getFinalAmount() != null ? order.getFinalAmount() : order.getTotalAmount();
+
+            // Tính số tiền giảm giá thực tế (nếu có)
+            double actualDiscount = originalTotal - actualPaidAmount;
+
+            // Chỉ hiển thị giảm giá nếu thực sự có giảm giá
+            boolean hasDiscount = actualDiscount > 0;
+
+            model.addAttribute("order", order);
+            model.addAttribute("customer", customer);
+            model.addAttribute("orderItems", orderItems);
+            model.addAttribute("originalTotal", originalTotal);  // Tổng tiền gốc
+            model.addAttribute("actualDiscount", hasDiscount ? actualDiscount : 0);  // Giảm giá thực tế
+            model.addAttribute("actualPaidAmount", actualPaidAmount);  // Số tiền thực tế đã thanh toán
+            model.addAttribute("hasDiscount", hasDiscount);  // Có giảm giá hay không
+
+            return "admin/customers/bill";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "error";
+        }
+    }
+
+    // ==================== CUSTOMERS ====================
+    @GetMapping("/customers/{id}/delete")
+    public String deleteCustomer(@PathVariable Long id, RedirectAttributes redirectAttributes, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            return "redirect:/login";
+        }
+        try {
+            customerService.deleteCustomerAndOrders(id);
+            redirectAttributes.addFlashAttribute("success", "Đã xóa khách hàng và toàn bộ đơn hàng liên quan!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Không thể xóa khách hàng: " + e.getMessage());
+        }
+        return "redirect:/admin/customers";
+    }
+
+    // ==================== INVENTORY ====================
+    @GetMapping("/inventory")
+    public String adminInventory(Model model, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            return "redirect:/login";
+        }
+        return "admin/inventory";
+    }
+
+    @GetMapping("/customers/{id}")
+    public String viewCustomer(@PathVariable Long id,
+                              @RequestParam(defaultValue = "0") int page,
+                              @RequestParam(defaultValue = "10") int size,
+                              Model model, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            return "redirect:/login";
+        }
+
+        try {
+            Customer customer = customerService.findById(id);
+            if (customer == null) {
+                model.addAttribute("error", "Không tìm thấy khách hàng với ID: " + id);
+                return "admin/customers/index"; // Hoặc redirect về danh sách
+            }
+
+            // Lấy danh sách hóa đơn với phân trang
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Page<Order> ordersPage = orderService.findByCustomerId(id, pageable);
+
+            // Tính tổng tiền đã mua và kiểm tra điều kiện VIP
+            long totalSpent = customerService.getTotalSpentByCustomer(id);
+            boolean firstOrderOver2M = customerService.isFirstOrderOver2M(id);
+            boolean canBeVip = (firstOrderOver2M || totalSpent >= 10_000_000);
+
+            // Cập nhật số đơn hàng trong customer (ép kiểu từ long sang int)
+            customer.setOrderCount((int) ordersPage.getTotalElements());
+
+            model.addAttribute("customer", customer);
+            model.addAttribute("orders", ordersPage.getContent());
+            model.addAttribute("currentPage", page);
+            model.addAttribute("totalPages", ordersPage.getTotalPages());
+            model.addAttribute("totalElements", ordersPage.getTotalElements());
+
+            // Thêm các biến cho VIP và điều kiện
+            model.addAttribute("totalSpent", totalSpent);
+            model.addAttribute("firstOrderOver2M", firstOrderOver2M);
+            model.addAttribute("canBeVip", canBeVip);
+
+            return "admin/customers/view";
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("error", "Có lỗi xảy ra khi tải dữ liệu: " + e.getMessage());
+            return "admin/customers/index";
+        }
+    }
+
+    // ==================== SHARED ENDPOINTS ====================
+    @GetMapping("")
+    public String adminHome() {
+        return "redirect:/admin/dashboard";
+    }
+
+    // ==================== ORDER ACTIONS ====================
+    @PostMapping("/api/orders/{id}/approve")
+    public ResponseEntity<?> approveOrder(@PathVariable Long id) {
+        try {
+            Order order = orderService.findById(id);
+            if (order == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            order.setStatus(Order.OrderStatus.COMPLETED);
+            orderService.updateOrder(id, order);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/orders/{id}/cancel")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long id) {
+        try {
+            Order order = orderService.findById(id);
+            if (order == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            order.setStatus(Order.OrderStatus.CANCELLED);
+            orderService.updateOrder(id, order);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/orders/{id}/approve-return")
+    public ResponseEntity<?> approveReturnRequest(@PathVariable Long id) {
+        try {
+            Order order = orderService.findById(id);
+            if (order == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            if (order.getStatus() == Order.OrderStatus.PROCESSING_RETURN) {
+                // Process return
+                order.setStatus(Order.OrderStatus.COMPLETED);
+                // TODO: Add logic for refund and inventory update
+            } else if (order.getStatus() == Order.OrderStatus.PROCESSING_EXCHANGE) {
+                // Process exchange
+                order.setStatus(Order.OrderStatus.COMPLETED);
+                // TODO: Add logic for exchange and inventory update
+            }
+
+            orderService.updateOrder(id, order);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/orders/{id}/reject-return")
+    public ResponseEntity<?> rejectReturnRequest(@PathVariable Long id) {
+        try {
+            Order order = orderService.findById(id);
+            if (order == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Return to COMPLETED state since we're rejecting the return/exchange
+            order.setStatus(Order.OrderStatus.COMPLETED);
+            orderService.updateOrder(id, order);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+}

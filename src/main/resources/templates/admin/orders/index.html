@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý đơn hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        .stats-card {
+            background: linear-gradient(45deg, var(--bs-primary), var(--bs-primary-rgb));
+            border: none;
+            border-radius: 10px;
+            color: white;
+        }
+        .stats-card .stats-icon {
+            font-size: 2rem;
+            opacity: 0.8;
+        }
+        .stats-card .stats-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .loading .loading-spinner {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h2 class="mb-0">Quản lý đơn hàng</h2>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="card stats-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-white-50">Đơn hàng mới</div>
+                                <div class="stats-number" id="newOrdersCount">0</div>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card stats-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-white-50">Đơn đổi/trả</div>
+                                <div class="stats-number" id="returnExchangeCount">0</div>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-exchange-alt"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card stats-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-white-50">Doanh thu hôm nay</div>
+                                <div class="stats-number" id="todayRevenue">0 ₫</div>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card stats-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-white-50">Đơn hoàn thành</div>
+                                <div class="stats-number" id="completedOrdersCount">0</div>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-4" id="orderTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="orders-tab" data-toggle="tab" href="#orders" role="tab">
+                    Đơn hàng
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="returns-tab" data-toggle="tab" href="#returns" role="tab">
+                    Yêu cầu đổi/trả
+                    <span class="badge badge-warning" id="pendingRequestCount">0</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="orders" role="tabpanel">
+                <!-- Form lọc đơn hàng -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form id="filterForm" class="form-row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Trạng thái:</label>
+                                    <select class="form-control" id="status">
+                                        <option value="">Tất cả</option>
+                                        <option value="PENDING">Đang chờ xử lý</option>
+                                        <option value="COMPLETED">Đã hoàn thành</option>
+                                        <option value="PROCESSING_RETURN">Đang xử lý trả hàng</option>
+                                        <option value="PROCESSING_EXCHANGE">Đang xử lý đổi hàng</option>
+                                        <option value="CANCELLED">Đã hủy</option>
+                                    </select>
+                                </div>
+                            </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Từ ngày:</label>
+                            <input type="datetime-local" class="form-control" id="startDate">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Đến ngày:</label>
+                            <input type="datetime-local" class="form-control" id="endDate">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="btn btn-primary btn-block">Tìm kiếm</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bảng đơn hàng -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Khách hàng</th>
+                                <th>Ngày tạo</th>
+                                <th>Tổng tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Yêu cầu đổi/trả</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab yêu cầu đổi/trả -->
+    <div class="tab-pane fade" id="returns" role="tabpanel">
+        <!-- Form lọc yêu cầu -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form id="returnsFilterForm" class="form-row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Loại yêu cầu:</label>
+                            <select class="form-control" id="requestType">
+                                <option value="">Tất cả</option>
+                                <option value="RETURN">Trả hàng</option>
+                                <option value="EXCHANGE">Đổi hàng</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Trạng thái:</label>
+                            <select class="form-control" id="requestStatus">
+                                <option value="">Tất cả</option>
+                                <option value="PENDING">Chờ duyệt</option>
+                                <option value="APPROVED">Đã duyệt</option>
+                                <option value="PROCESSING">Đang xử lý</option>
+                                <option value="COMPLETED">Hoàn thành</option>
+                                <option value="REJECTED">Đã từ chối</option>
+                                <option value="CANCELLED">Đã hủy</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Từ ngày:</label>
+                            <input type="datetime-local" class="form-control" id="requestStartDate">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Đến ngày:</label>
+                            <input type="datetime-local" class="form-control" id="requestEndDate">
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Tìm kiếm
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="resetReturnsFilter">
+                            <i class="fas fa-undo"></i> Đặt lại
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bảng yêu cầu đổi/trả -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="returnsTable">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn gốc</th>
+                                <th>Khách hàng</th>
+                                <th>Loại yêu cầu</th>
+                                <th>Ngày tạo</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Modal xem chi tiết đơn hàng -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chi tiết đơn hàng</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="order-info mb-4">
+                        <h6>Thông tin đơn hàng</h6>
+                        <div id="orderInfo"></div>
+                    </div>
+                    <div class="return-exchange-info mb-4">
+                        <h6>Thông tin đổi/trả hàng</h6>
+                        <div id="returnExchangeInfo"></div>
+                    </div>
+                    <div class="items-list">
+                        <h6>Danh sách sản phẩm</h6>
+                        <div id="itemsList"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal xử lý yêu cầu đổi/trả -->
+    <div class="modal fade" id="processRequestModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Xử lý yêu cầu đổi/trả</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Chi tiết yêu cầu -->
+                    <div class="request-details mb-4">
+                        <h6>Chi tiết yêu cầu</h6>
+                        <dl class="row" id="requestDetails">
+                            <!-- Thông tin sẽ được load bằng JavaScript -->
+                        </dl>
+                    </div>
+
+                    <!-- Sản phẩm đổi/trả -->
+                    <div class="products-info mb-4">
+                        <h6>Sản phẩm cần xử lý</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm" id="requestProducts">
+                                <thead>
+                                    <tr>
+                                        <th>Sản phẩm</th>
+                                        <th>Số lượng</th>
+                                        <th>Tình trạng kho</th>
+                                        <th>Ghi chú</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Sản phẩm sẽ được load bằng JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Form xử lý -->
+                    <form id="processRequestForm">
+                        <input type="hidden" id="requestId">
+                        <div class="form-group">
+                            <label>Quyết định:</label>
+                            <select class="form-control" id="decision" name="decision">
+                                <option value="APPROVE">Duyệt yêu cầu</option>
+                                <option value="REJECT">Từ chối yêu cầu</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="rejectReasonGroup" style="display: none;">
+                            <label>Lý do từ chối:</label>
+                            <textarea class="form-control" id="rejectReason" rows="3"
+                                    placeholder="Vui lòng nêu rõ lý do từ chối yêu cầu..."></textarea>
+                        </div>
+
+                        <div id="processingGroup">
+                            <h6 class="mt-4">Thông tin xử lý</h6>
+                            
+                            <!-- Xử lý trả hàng -->
+                            <div id="returnProcessing" style="display: none;">
+                                <div class="form-group">
+                                    <label>Tình trạng sản phẩm:</label>
+                                    <select class="form-control" id="productCondition">
+                                        <option value="GOOD">Tốt - Có thể bán lại</option>
+                                        <option value="DAMAGED">Hư hỏng - Cần xử lý</option>
+                                        <option value="UNUSABLE">Không thể sử dụng</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ghi chú xử lý:</label>
+                                    <textarea class="form-control" id="processingNote" rows="2"
+                                            placeholder="Thông tin thêm về việc xử lý sản phẩm..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Xử lý đổi hàng -->
+                            <div id="exchangeProcessing" style="display: none;">
+                                <div class="form-group">
+                                    <label>Sản phẩm đổi:</label>
+                                    <div id="exchangeProductsList">
+                                        <!-- Danh sách sản phẩm đổi sẽ được load bằng JavaScript -->
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kiểm tra tồn kho:</label>
+                                    <div id="stockStatus">
+                                        <!-- Thông tin tồn kho sẽ được load bằng JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" id="submitDecision">Xác nhận</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize datetime pickers
+            flatpickr("input[type=datetime-local]", {
+                enableTime: true,
+                dateFormat: "Y-m-d H:i"
+            });
+
+            // Load statistics
+            function loadStatistics() {
+                $.get("/admin/orders/statistics", function(data) {
+                    $("#newOrdersCount").text(data.newOrders);
+                    $("#returnExchangeCount").text(data.returnExchangeRequests);
+                    $("#todayRevenue").text(data.todayRevenue.toLocaleString() + " ₫");
+                    $("#completedOrdersCount").text(data.completedOrders);
+                });
+            }
+
+            // Load orders
+            function loadOrders() {
+                const tableBody = $("#ordersTable tbody");
+                tableBody.addClass("loading");
+                tableBody.html('<tr><td colspan="7" class="text-center"><div class="spinner-border text-primary loading-spinner" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>');
+                
+                $.get("/admin/orders/list", {
+                    status: $("#status").val(),
+                    startDate: $("#startDate").val(),
+                    endDate: $("#endDate").val()
+                }, function(data) {
+                    tableBody.removeClass("loading");
+                    var tbody = $("#ordersTable tbody");
+                    tbody.empty();
+                    
+                    data.forEach(function(order) {
+                        var row = $("<tr>");
+                        row.append($("<td>").text(order.orderNumber));
+                        row.append($("<td>").text(order.customer.name));
+                        row.append($("<td>").text(new Date(order.createdAt).toLocaleString()));
+                        row.append($("<td>").text(order.finalAmount.toLocaleString() + " VNĐ"));
+                        row.append($("<td>").text(getStatusText(order.status)));
+                        
+                        // Thông tin yêu cầu đổi/trả
+                        var returnExchangeCell = $("<td>");
+                        if (order.returnExchangeRequest) {
+                            returnExchangeCell.text(getRequestTypeText(order.returnExchangeRequest.type) + 
+                                                 " - " + getRequestStatusText(order.returnExchangeRequest.status));
+                        }
+                        row.append(returnExchangeCell);
+                        
+                        // Thao tác
+                        var actionCell = $("<td>");
+                        var viewBtn = $("<button>")
+                            .addClass("btn btn-info btn-sm mr-2")
+                            .text("Xem")
+                            .click(function() {
+                                showOrderDetail(order);
+                            });
+                        actionCell.append(viewBtn);
+
+                        if (order.returnExchangeRequest && 
+                            order.returnExchangeRequest.status === "PENDING") {
+                            var processBtn = $("<button>")
+                                .addClass("btn btn-primary btn-sm")
+                                .text("Xử lý yêu cầu")
+                                .click(function() {
+                                    showProcessRequestModal(order.returnExchangeRequest);
+                                });
+                            actionCell.append(processBtn);
+                        }
+                        
+                        row.append(actionCell);
+                        tbody.append(row);
+                    });
+                });
+            }
+
+            // Handle filter form submission
+            $("#filterForm").on("submit", function(e) {
+                e.preventDefault();
+                loadOrders();
+            });
+
+            // Load initial data
+            function loadInitialData() {
+                loadStatistics();
+                loadOrders();
+            }
+
+            // Refresh data periodically
+            setInterval(loadInitialData, 60000); // Refresh every minute
+
+            // Show order detail
+            function showOrderDetail(order) {
+                var orderInfo = $("#orderInfo");
+                orderInfo.html(`
+                    <p><strong>Mã đơn:</strong> ${order.orderNumber}</p>
+                    <p><strong>Khách hàng:</strong> ${order.customer.name}</p>
+                    <p><strong>Ngày tạo:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
+                    <p><strong>Tổng tiền:</strong> ${order.finalAmount.toLocaleString()} VNĐ</p>
+                    <p><strong>Trạng thái:</strong> ${getStatusText(order.status)}</p>
+                `);
+
+                if (order.returnExchangeRequest) {
+                    var request = order.returnExchangeRequest;
+                    $("#returnExchangeInfo").html(`
+                        <p><strong>Loại yêu cầu:</strong> ${getRequestTypeText(request.type)}</p>
+                        <p><strong>Trạng thái:</strong> ${getRequestStatusText(request.status)}</p>
+                        <p><strong>Lý do:</strong> ${request.reason}</p>
+                    `);
+                } else {
+                    $("#returnExchangeInfo").html("<p>Không có yêu cầu đổi/trả</p>");
+                }
+
+                var itemsList = $("#itemsList");
+                itemsList.empty();
+                var table = $("<table>").addClass("table table-sm");
+                table.append(`
+                    <thead>
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th>Số lượng</th>
+                            <th>Đơn giá</th>
+                            <th>Thành tiền</th>
+                        </tr>
+                    </thead>
+                `);
+                var tbody = $("<tbody>");
+                order.items.forEach(function(item) {
+                    tbody.append(`
+                        <tr>
+                            <td>${item.product.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>${item.price.toLocaleString()} VNĐ</td>
+                            <td>${(item.price * item.quantity).toLocaleString()} VNĐ</td>
+                        </tr>
+                    `);
+                });
+                table.append(tbody);
+                itemsList.append(table);
+
+                $("#orderDetailModal").modal("show");
+            }
+
+            // Show process request modal
+            function showProcessRequestModal(request) {
+                $("#requestId").val(request.id);
+                $("#processRequestModal").modal("show");
+            }
+
+            // Handle decision change
+            $("#decision").change(function() {
+                if ($(this).val() === "REJECT") {
+                    $("#rejectReasonGroup").show();
+                    $("#rejectReason").prop("required", true);
+                } else {
+                    $("#rejectReasonGroup").hide();
+                    $("#rejectReason").prop("required", false);
+                }
+            });
+
+            // Load pending request count
+            function loadPendingRequestCount() {
+                $.get("/admin/returns/pending-count", function(count) {
+                    $("#pendingRequestCount").text(count > 0 ? count : '');
+                });
+            }
+
+            // Load return/exchange requests
+            function loadReturnRequests() {
+                $.get("/admin/returns/list", {
+                    type: $("#requestType").val(),
+                    status: $("#requestStatus").val(),
+                    startDate: $("#requestStartDate").val(),
+                    endDate: $("#requestEndDate").val()
+                }, function(requests) {
+                    var tbody = $("#returnsTable tbody");
+                    tbody.empty();
+                    
+                    requests.forEach(function(request) {
+                        var row = $("<tr>");
+                        row.append($("<td>").text(request.originalOrder.orderNumber));
+                        row.append($("<td>").text(request.originalOrder.customer.name));
+                        row.append($("<td>").text(getRequestTypeText(request.type)));
+                        row.append($("<td>").text(new Date(request.createdAt).toLocaleString()));
+                        
+                        // Status badge
+                        var statusBadge = $("<span>")
+                            .addClass("badge")
+                            .addClass("badge-" + getRequestStatusBadgeClass(request.status))
+                            .text(getRequestStatusText(request.status));
+                        row.append($("<td>").append(statusBadge));
+                        
+                        // Actions
+                        var actions = $("<td>");
+                        
+                        // View button
+                        var viewBtn = $("<button>")
+                            .addClass("btn btn-info btn-sm mr-2")
+                            .html('<i class="fas fa-eye"></i>')
+                            .click(function() {
+                                showRequestDetails(request);
+                            });
+                        actions.append(viewBtn);
+                        
+                        // Process button (only for PENDING requests)
+                        if (request.status === 'PENDING') {
+                            var processBtn = $("<button>")
+                                .addClass("btn btn-primary btn-sm")
+                                .html('<i class="fas fa-tasks"></i>')
+                                .click(function() {
+                                    showProcessRequestModal(request);
+                                });
+                            actions.append(processBtn);
+                        }
+                        
+                        row.append(actions);
+                        tbody.append(row);
+                    });
+
+                    loadPendingRequestCount();
+                });
+            }
+
+            // Reset returns filter
+            $("#resetReturnsFilter").click(function() {
+                $("#returnsFilterForm")[0].reset();
+                loadReturnRequests();
+            });
+
+            // Handle returns filter form submission
+            $("#returnsFilterForm").on("submit", function(e) {
+                e.preventDefault();
+                loadReturnRequests();
+            });
+
+            // Show process request modal with enhanced details
+            function showProcessRequestModal(request) {
+                $("#requestId").val(request.id);
+                $("#decision").val("APPROVE");
+                $("#rejectReason").val('');
+                $("#rejectReasonGroup").hide();
+                
+                // Load request details
+                var details = $("#requestDetails");
+                details.html(`
+                    <dt class="col-sm-3">Mã đơn gốc:</dt>
+                    <dd class="col-sm-9">${request.originalOrder.orderNumber}</dd>
+                    
+                    <dt class="col-sm-3">Khách hàng:</dt>
+                    <dd class="col-sm-9">${request.originalOrder.customer.name}</dd>
+                    
+                    <dt class="col-sm-3">Loại yêu cầu:</dt>
+                    <dd class="col-sm-9">${getRequestTypeText(request.type)}</dd>
+                    
+                    <dt class="col-sm-3">Ngày tạo:</dt>
+                    <dd class="col-sm-9">${new Date(request.createdAt).toLocaleString()}</dd>
+                    
+                    <dt class="col-sm-3">Lý do:</dt>
+                    <dd class="col-sm-9">${request.reason}</dd>
+                `);
+
+                // Load products table
+                var productsTable = $("#requestProducts tbody");
+                productsTable.empty();
+                
+                request.items.forEach(function(item) {
+                    var row = $("<tr>");
+                    row.append($("<td>").text(item.product.name));
+                    row.append($("<td>").text(item.quantity));
+                    
+                    // Check stock status
+                    $.get(`/admin/products/${item.product.id}/stock`, function(stock) {
+                        var stockStatus = stock.quantity >= item.quantity
+                            ? `<span class="text-success">Đủ hàng (${stock.quantity})</span>`
+                            : `<span class="text-danger">Thiếu hàng (${stock.quantity}/${item.quantity})</span>`;
+                        row.find("td:eq(2)").html(stockStatus);
+                    });
+                    
+                    row.append($("<td>")); // Stock status will be filled
+                    row.append($("<td>").html('<input type="text" class="form-control form-control-sm" placeholder="Ghi chú...">'));
+                    
+                    productsTable.append(row);
+                });
+
+                // Show/hide processing sections based on request type
+                if (request.type === 'RETURN') {
+                    $("#returnProcessing").show();
+                    $("#exchangeProcessing").hide();
+                } else {
+                    $("#returnProcessing").hide();
+                    $("#exchangeProcessing").show();
+                    loadExchangeProducts(request);
+                }
+
+                $("#processRequestModal").modal("show");
+            }
+
+            // Load exchange products details
+            function loadExchangeProducts(request) {
+                var container = $("#exchangeProductsList");
+                container.empty();
+                
+                // Create table for exchange products
+                var table = $("<table>").addClass("table table-sm");
+                var thead = $("<thead>").append(`
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Số lượng yêu cầu</th>
+                        <th>Tồn kho</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                `);
+                var tbody = $("<tbody>");
+
+                // Add each exchange product
+                request.exchangeProducts.forEach(function(product) {
+                    $.get(`/admin/products/${product.id}/stock`, function(stock) {
+                        var status = stock.quantity >= product.quantity
+                            ? '<span class="badge badge-success">Có thể đổi</span>'
+                            : '<span class="badge badge-danger">Không đủ hàng</span>';
+                            
+                        tbody.append(`
+                            <tr>
+                                <td>${product.name}</td>
+                                <td>${product.quantity}</td>
+                                <td>${stock.quantity}</td>
+                                <td>${status}</td>
+                            </tr>
+                        `);
+                    });
+                });
+
+                table.append(thead).append(tbody);
+                container.append(table);
+            }
+
+            // Handle request processing
+            $("#submitDecision").click(function() {
+                var requestId = $("#requestId").val();
+                var decision = $("#decision").val();
+                var reason = $("#rejectReason").val();
+                var requestType = $(".modal-body").data("requestType");
+
+                if (decision === "REJECT" && !reason) {
+                    alert("Vui lòng nhập lý do từ chối");
+                    return;
+                }
+
+                var processData = {
+                    decision: decision,
+                    reason: reason
+                };
+
+                // Add processing details based on request type
+                if (decision === "APPROVE") {
+                    if (requestType === "RETURN") {
+                        processData.productCondition = $("#productCondition").val();
+                        processData.processingNote = $("#processingNote").val();
+                    }
+                }
+
+                $.ajax({
+                    url: `/admin/returns/${requestId}/${decision.toLowerCase()}`,
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(processData),
+                    success: function(response) {
+                        $("#processRequestModal").modal("hide");
+                        loadOrders();
+                        loadReturnRequests();
+                        alert("Xử lý yêu cầu thành công!");
+                    },
+                    error: function(xhr) {
+                        alert("Có lỗi xảy ra: " + xhr.responseText);
+                    }
+                });
+            });
+
+            // Helper functions
+            function getStatusText(status) {
+                const statusMap = {
+                    'PENDING': 'Đang chờ xử lý',
+                    'COMPLETED': 'Đã hoàn thành',
+                    'PROCESSING_RETURN': 'Đang xử lý trả hàng',
+                    'PROCESSING_EXCHANGE': 'Đang xử lý đổi hàng',
+                    'CANCELLED': 'Đã hủy'
+                };
+                return statusMap[status] || status;
+            }
+
+            function getRequestTypeText(type) {
+                return type === 'RETURN' ? 'Trả hàng' : 'Đổi hàng';
+            }
+
+            function getRequestStatusText(status) {
+                const statusMap = {
+                    'PENDING': 'Chờ duyệt',
+                    'APPROVED': 'Đã duyệt',
+                    'REJECTED': 'Đã từ chối',
+                    'PROCESSING': 'Đang xử lý',
+                    'COMPLETED': 'Hoàn thành',
+                    'CANCELLED': 'Đã hủy'
+                };
+                return statusMap[status] || status;
+            }
+
+            function getRequestStatusBadgeClass(status) {
+                const classMap = {
+                    'PENDING': 'warning',
+                    'APPROVED': 'success',
+                    'REJECTED': 'danger',
+                    'PROCESSING': 'info',
+                    'COMPLETED': 'primary',
+                    'CANCELLED': 'secondary'
+                };
+                return classMap[status] || 'secondary';
+            }
+
+            // Load initial data
+            loadInitialData();
+        });
+    </script>
+</body>
+</html>

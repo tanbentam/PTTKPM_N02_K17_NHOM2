@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý đơn đổi/trả - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background: #f8f9fa; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .sidebar { 
+            background: linear-gradient(180deg, #4e73df 0%, #224abe 100%);
+            min-height: 100vh; 
+            color: #fff; 
+            width: 250px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+        .sidebar .nav-link { 
+            color: #fff; 
+            padding: 12px 20px;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link.active, 
+        .sidebar .nav-link:hover { 
+            background: rgba(255,255,255,0.1); 
+            border-left: 4px solid #fff;
+        }
+        .sidebar .nav-link i { margin-right: 12px; }
+        .main-content { 
+            margin-left: 250px; 
+            padding: 20px;
+            width: calc(100% - 250px);
+        }
+        .card { 
+            border-radius: 10px; 
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            border: none;
+        }
+        .card-stats {
+            transition: transform 0.2s;
+        }
+        .card-stats:hover {
+            transform: translateY(-5px);
+        }
+        .sidebar-brand {
+            padding: 1.5rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .table {
+            width: 100% !important;
+            min-width: 1200px;
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .badge-pending { background: #f6c23e; color: #000; }
+        .badge-approved { background: #1cc88a; color: #fff; }
+        .badge-rejected { background: #e74a3b; color: #fff; }
+        .badge-completed { background: #4e73df; color: #fff; }
+        .badge-processing { background: #36b9cc; color: #fff; }
+        .badge-cancelled { background: #858796; color: #fff; }
+        </style>
+<body>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fas fa-store fa-2x mb-2"></i>
+                <div class="fw-bold fs-5">Admin Panel</div>
+            </div>
+            <ul class="nav flex-column mt-3">
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/dashboard">
+                        <i class="fas fa-tachometer-alt"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/products">
+                        <i class="fas fa-box"></i>Sản Phẩm
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/customers">
+                        <i class="fas fa-users"></i>Khách Hàng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/admin/returns">
+                        <i class="fas fa-exchange-alt"></i>Đổi/Trả
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/inventory">
+                        <i class="fas fa-warehouse"></i>Kho Hàng
+                    </a>
+                </li>
+                <li class="nav-item mt-auto">
+                    <a class="nav-link" href="/auth/logout">
+                        <i class="fas fa-sign-out-alt"></i>Đăng Xuất
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0 text-gray-800">
+                    <i class="fas fa-exchange-alt"></i> Quản lý đơn đổi/trả
+                </h1>
+                <div class="d-flex align-items-center">
+                    <form class="d-flex me-2" id="searchForm">
+                        <input type="date" class="form-control me-2" id="startDate" name="startDate">
+                        <input type="date" class="form-control me-2" id="endDate" name="endDate">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Tìm kiếm
+                        </button>
+                    </form>
+                    <div class="btn-group ms-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="filterByStatus('all')">
+                            Tất cả
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="filterByStatus('pending')">
+                            Chờ duyệt
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="filterByStatus('approved')">
+                            Đã duyệt
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card card-stats border-left-primary shadow h-100">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        Tổng yêu cầu
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${totalRequests ?: 0}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card card-stats border-left-warning shadow h-100">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                        Chờ duyệt
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${pendingRequests ?: 0}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-clock fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card card-stats border-left-success shadow h-100">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Đã duyệt hôm nay
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${approvedToday ?: 0}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card card-stats border-left-danger shadow h-100">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                        Đã từ chối
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${rejectedRequests ?: 0}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng yêu cầu đổi/trả -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Danh sách yêu cầu đổi/trả</h6>
+                    <div class="d-flex align-items-center">
+                        <button type="button" class="btn btn-outline-primary btn-sm me-2" onclick="refreshTable()">
+                            <i class="fas fa-sync-alt"></i> Làm mới
+                        </button>
+                        <span class="text-muted">Hiển thị <span th:text="${currentPage + 1}">1</span>/<span th:text="${totalPages}">1</span> trang</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="returnsTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Mã YC</th>
+                                    <th>Mã ĐH</th>
+                                    <th>Khách hàng</th>
+                                    <th>Loại YC</th>
+                                    <th>Giá trị</th>
+                                    <th>Ngày tạo</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="request : ${requests}">
+                                    <td th:text="${'YC' + request.id}">YC001</td>
+                                    <td>
+                                        <a href="#" class="text-primary" th:text="${request.order.orderNumber}"
+                                           th:onclick="'viewOrder(\'' + ${request.order.id} + '\')'">
+                                            #12345
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <div th:text="${request.order.customer.name}">Nguyễn Văn A</div>
+                                        <small class="text-muted" th:text="${request.order.customer.phone}">0123456789</small>
+                                    </td>
+                                    <td>
+                                        <span th:if="${request.type == 'RETURN'}" class="badge bg-danger">Trả hàng</span>
+                                        <span th:if="${request.type == 'EXCHANGE'}" class="badge bg-info">Đổi hàng</span>
+                                    </td>
+                                    <td th:text="${#numbers.formatDecimal(request.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">
+                                        0 VNĐ
+                                    </td>
+                                    <td th:text="${#temporals.format(request.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                        01/01/2023
+                                    </td>
+                                    <td>
+                                        <span th:if="${request.status == 'PENDING'}" class="status-badge badge-pending">
+                                            <i class="fas fa-clock"></i> Chờ duyệt
+                                        </span>
+                                        <span th:if="${request.status == 'APPROVED'}" class="status-badge badge-approved">
+                                            <i class="fas fa-check"></i> Đã duyệt
+                                        </span>
+                                        <span th:if="${request.status == 'REJECTED'}" class="status-badge badge-rejected">
+                                            <i class="fas fa-times"></i> Đã từ chối
+                                        </span>
+                                        <span th:if="${request.status == 'PROCESSING'}" class="status-badge badge-processing">
+                                            <i class="fas fa-cog fa-spin"></i> Đang xử lý
+                                        </span>
+                                        <span th:if="${request.status == 'COMPLETED'}" class="status-badge badge-completed">
+                                            <i class="fas fa-check-double"></i> Hoàn thành
+                                        </span>
+                                        <span th:if="${request.status == 'CANCELLED'}" class="status-badge badge-cancelled">
+                                            <i class="fas fa-ban"></i> Đã hủy
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-info btn-sm" 
+                                                    th:onclick="'viewRequest(\'' + ${request.id} + '\')'">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button th:if="${request.status == 'PENDING'}" 
+                                                    type="button" class="btn btn-success btn-sm"
+                                                    th:onclick="'approveRequest(\'' + ${request.id} + '\')'">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button th:if="${request.status == 'PENDING'}" 
+                                                    type="button" class="btn btn-danger btn-sm"
+                                                    th:onclick="'rejectRequest(\'' + ${request.id} + '\')'">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(requests)}">
+                                    <td colspan="8" class="text-center py-4">
+                                        <i class="fas fa-exchange-alt fa-2x mb-3"></i><br>
+                                        <p class="text-muted">Không có yêu cầu đổi/trả nào</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Phân trang -->
+                <div class="card-footer" th:if="${totalPages > 1}">
+                    <nav>
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                                <a class="page-link" 
+                                   th:href="@{/admin/returns(page=${currentPage-1},status=${status})}">&laquo;</a>
+                            </li>
+                            <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages-1)}"
+                                th:classappend="${i == currentPage} ? 'active'">
+                                <a class="page-link" th:href="@{/admin/returns(page=${i},status=${status})}" 
+                                   th:text="${i+1}">1</a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == totalPages-1} ? 'disabled'">
+                                <a class="page-link" 
+                                   th:href="@{/admin/returns(page=${currentPage+1},status=${status})}">&raquo;</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chi Tiết -->
+    <div class="modal fade" id="returnExchangeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tạo phiếu đổi/trả hàng</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="returnExchangeForm">
+                        <input type="hidden" id="orderId" name="orderId">
+                        
+                        <div class="form-group">
+                            <label>Loại yêu cầu:</label>
+                            <select class="form-control" id="requestType" name="type" required>
+                                <option value="RETURN">Trả hàng</option>
+                                <option value="EXCHANGE">Đổi hàng</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Lý do:</label>
+                            <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                        </div>
+
+                        <div class="exchange-order-section" style="display: none;">
+                            <div class="form-group">
+                                <label>Chọn đơn hàng đổi:</label>
+                                <select class="form-control" id="exchangeOrderId" name="exchangeOrderId">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Sản phẩm cần đổi/trả:</label>
+                            <div id="itemsList">
+                                <!-- Items will be loaded here -->
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" id="submitRequest">Tạo yêu cầu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentRequestId = null;
+
+        // Function to refresh the page
+        function refreshTable() {
+            const button = event.target.closest('button');
+            const icon = button.querySelector('i');
+            button.disabled = true;
+            icon.className = 'fas fa-spinner fa-spin';
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }
+
+        // Function to filter by status
+        function filterByStatus(status) {
+            window.location.href = `/admin/returns?status=${status}`;
+        }
+
+        // Handle search form submission
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            window.location.href = `/admin/returns?startDate=${startDate}&endDate=${endDate}`;
+        });
+
+        // Function to view return request details
+        function viewRequest(requestId) {
+            currentRequestId = requestId;
+            fetch(`/admin/returns/${requestId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Populate request info
+                    document.getElementById('requestId').textContent = 'YC' + data.id;
+                    document.getElementById('requestType').textContent = 
+                        data.type === 'RETURN' ? 'Trả hàng' : 'Đổi hàng';
+                    document.getElementById('requestDate').textContent = 
+                        new Date(data.createdAt).toLocaleString('vi-VN');
+                    document.getElementById('requestReason').textContent = data.reason;
+
+                    // Status badge
+                    const statusElement = document.getElementById('requestStatus');
+                    let statusHtml = '';
+                    switch(data.status) {
+                        case 'PENDING':
+                            statusHtml = '<span class="status-badge badge-pending">Chờ duyệt</span>';
+                            break;
+                        case 'APPROVED':
+                            statusHtml = '<span class="status-badge badge-approved">Đã duyệt</span>';
+                            break;
+                        case 'REJECTED':
+                            statusHtml = '<span class="status-badge badge-rejected">Đã từ chối</span>';
+                            break;
+                        case 'COMPLETED':
+                            statusHtml = '<span class="status-badge badge-completed">Hoàn thành</span>';
+                            break;
+                    }
+                    statusElement.innerHTML = statusHtml;
+
+                    // Populate customer info
+                    document.getElementById('customerName').textContent = data.customer.name;
+                    document.getElementById('customerPhone').textContent = data.customer.phone;
+                    document.getElementById('customerAddress').textContent = data.customer.address;
+                    document.getElementById('customerType').innerHTML = 
+                        data.customer.vip ? 
+                            '<span class="badge bg-warning text-dark"><i class="fas fa-crown"></i> VIP</span>' : 
+                            '<span class="badge bg-secondary">Thường</span>';
+
+                    // Populate return items
+                    const returnItemsBody = document.getElementById('returnItems');
+                    returnItemsBody.innerHTML = data.items.map(item => `
+                        <tr>
+                            <td>${item.product.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>${item.price.toLocaleString('vi-VN')} VNĐ</td>
+                            <td>${(item.price * item.quantity).toLocaleString('vi-VN')} VNĐ</td>
+                        </tr>
+                    `).join('');
+
+                    // Show/hide exchange products section and populate if needed
+                    const exchangeSection = document.getElementById('exchangeProductsSection');
+                    const exchangeItemsBody = document.getElementById('exchangeItems');
+                    if (data.type === 'EXCHANGE' && data.exchangeProducts) {
+                        exchangeSection.style.display = 'block';
+                        exchangeItemsBody.innerHTML = data.exchangeProducts.map(item => `
+                            <tr>
+                                <td>${item.product.name}</td>
+                                <td>${item.quantity}</td>
+                                <td>${item.price.toLocaleString('vi-VN')} VNĐ</td>
+                                <td>${(item.price * item.quantity).toLocaleString('vi-VN')} VNĐ</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        exchangeSection.style.display = 'none';
+                    }
+
+                    // Show/hide action buttons based on status
+                    const actionButtons = document.getElementById('actionButtons');
+                    if (data.status === 'PENDING') {
+                        actionButtons.innerHTML = `
+                            <button type="button" class="btn btn-success" onclick="approveRequest('${requestId}')">
+                                <i class="fas fa-check"></i> Duyệt yêu cầu
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="showRejectForm()">
+                                <i class="fas fa-times"></i> Từ chối
+                            </button>
+                        `;
+                    } else {
+                        actionButtons.innerHTML = '';
+                    }
+
+                    // Hide rejection form initially
+                    document.getElementById('rejectionForm').style.display = 'none';
+
+                    new bootstrap.Modal(document.getElementById('viewRequestModal')).show();
+                });
+        }
+
+        // Function to show rejection form
+        function showRejectForm() {
+            document.getElementById('rejectionForm').style.display = 'block';
+            document.getElementById('actionButtons').innerHTML = `
+                <button type="button" class="btn btn-danger" onclick="confirmReject()">
+                    <i class="fas fa-times"></i> Xác nhận từ chối
+                </button>
+            `;
+        }
+
+        // Function to approve request
+        function approveRequest(requestId) {
+            if (confirm('Bạn có chắc chắn muốn duyệt yêu cầu này?')) {
+                fetch(`/admin/returns/${requestId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.content
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert('Yêu cầu đã được duyệt thành công');
+                        location.reload();
+                    } else {
+                        alert(result.message || 'Có lỗi xảy ra khi duyệt yêu cầu');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Có lỗi xảy ra khi duyệt yêu cầu');
+                });
+            }
+        }
+
+        // Function to confirm rejection
+        function confirmReject() {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                alert('Vui lòng nhập lý do từ chối yêu cầu');
+                return;
+            }
+
+            fetch(`/admin/returns/${currentRequestId}/reject`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.content
+                },
+                body: JSON.stringify({ reason: reason })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Yêu cầu đã được từ chối');
+                    location.reload();
+                } else {
+                    alert(result.message || 'Có lỗi xảy ra khi từ chối yêu cầu');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi từ chối yêu cầu');
+            });
+        }
+
+        // Function to view order details
+        function viewOrder(orderId) {
+            window.location.href = `/admin/orders/${orderId}`;
+        }
+    </script>
+</body>
+</html>

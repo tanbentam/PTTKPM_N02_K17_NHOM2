@@ -3,11 +3,14 @@ package com.pttkpm.n02group2.quanlybanhang.Service;
 import com.pttkpm.n02group2.quanlybanhang.Model.*;
 import com.pttkpm.n02group2.quanlybanhang.Repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,8 +32,27 @@ public class OrderService {
     // Cache để theo dõi tồn kho real-time
     private final Map<Long, Integer> inventoryCache = new ConcurrentHashMap<>();
 
-    // ==================== MAIN CREATE ORDER METHOD ====================
-    
+    // ==================== PHÂN TRANG METHODS ====================
+
+    public Page<Order> findOrdersByDateRange(LocalDate from, LocalDate to, Pageable pageable) {
+    LocalDateTime fromDateTime = from.atStartOfDay();
+    LocalDateTime toDateTime = to.plusDays(1).atStartOfDay();
+    return orderRepository.findByOrderDateBetweenOrderByOrderDateDesc(fromDateTime, toDateTime, pageable);
+}
+
+public List<Order> findOrdersByDateRange(LocalDate from, LocalDate to) {
+    LocalDateTime fromDateTime = from.atStartOfDay();
+    LocalDateTime toDateTime = to.plusDays(1).atStartOfDay();
+    return orderRepository.findByOrderDateBetween(fromDateTime, toDateTime);
+}
+    public Page<Order> findAllOrders(Pageable pageable) {
+    return orderRepository.findAllByOrderByOrderDateDesc(pageable);
+}
+
+    public List<Order> findAllOrders() {
+    return orderRepository.findAll();
+}
+    // ==================== EXISTING METHODS ====================
 
     public Page<Order> findByCustomerId(Long customerId, Pageable pageable) {
         System.out.println("Finding orders for customer ID: " + customerId);

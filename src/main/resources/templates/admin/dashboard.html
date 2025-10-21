@@ -8,24 +8,111 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .dashboard-card {
-            transition: transform 0.3s;
+            transition: transform 0.3s, box-shadow 0.3s;
             border: none;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
         }
         .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
         }
         .stat-card {
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-        }
-        .transaction-table {
-            max-height: 400px;
-            overflow-y: auto;
+            border-radius: 15px;
         }
         .quick-access-grid {
-            margin-top: 30px;
+            margin-top: 40px;
+        }
+        .quick-access-card {
+            height: 220px;
+            display: flex;
+            flex-direction: column;
+        }
+        .quick-access-card .card-body {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .quick-access-card .btn {
+            width: 100%;
+            padding: 10px 15px;
+            font-weight: 600;
+            border-radius: 8px;
+            margin-top: auto;
+            font-size: 0.9rem;
+        }
+        .navbar-nav .nav-link {
+            font-size: 1.1rem;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+        .navbar-nav .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .navbar-nav .nav-link i {
+            margin-right: 8px;
+        }
+        .stat-card .card-body {
+            padding: 2rem;
+        }
+        .stat-card h3 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0;
+        }
+        .stat-card .card-text {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .quick-access-icon {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+        }
+        .card-text.small {
+            font-size: 0.85rem;
+            color: #6c757d;
+            line-height: 1.3;
+            margin-bottom: 1rem;
+        }
+        @media (max-width: 1199px) {
+            .quick-access-card {
+                height: auto;
+                margin-bottom: 20px;
+            }
+            .quick-access-card .card-body {
+                padding: 1.25rem;
+            }
+        }
+        @media (max-width: 991px) {
+            .navbar-nav .nav-link {
+                margin-right: 0;
+                margin-bottom: 8px;
+            }
+        }
+        @media (max-width: 767px) {
+            .quick-access-card {
+                height: auto;
+                margin-bottom: 15px;
+            }
+            .card-title {
+                font-size: 1rem;
+            }
+            .card-text.small {
+                font-size: 0.8rem;
+            }
         }
     </style>
 </head>
@@ -33,17 +120,14 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="/admin/dashboard">
+            <a class="navbar-brand fw-bold" href="/admin/dashboard">
                 <i class="fas fa-store"></i> Quản Lý Bán Hàng
             </a>
-            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
             <div class="collapse navbar-collapse" id="navbarNav">
-                <!-- Navigation cho Admin -->
-                <ul class="navbar-nav me-auto">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
                         <a class="nav-link" href="/admin/products">
                             <i class="fas fa-box"></i> Sản Phẩm
@@ -65,23 +149,16 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/admin/inventory">
-                            <i class="fas fa-warehouse"></i> Kho Hàng
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/transactions">
-                            <i class="fas fa-history"></i> Lịch Sử Giao Dịch
+                        <a class="nav-link" href="/admin/revenue">
+                            <i class="fas fa-chart-line"></i> Doanh Thu
                         </a>
                     </li>
                 </ul>
-
-                <!-- User menu -->
-                <ul class="navbar-nav ml-auto">
+                <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <span th:text="${username}">Admin</span>
-                            <i class="fas fa-user-circle fa-lg"></i>
+                            <i class="fas fa-user-circle fa-lg ms-2"></i>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end">
                             <a class="dropdown-item" href="/logout">
@@ -96,11 +173,11 @@
 
     <!-- Main Content -->
     <div class="container mt-4">
-        <!-- Welcome Message for Admin -->
-        <div class="row">
+        <!-- Welcome Message -->
+        <div class="row mb-4">
             <div class="col-12">
-                <h2 class="mb-4">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard Quản Trị
+                <h2 class="mb-3">
+                    <i class="fas fa-tachometer-alt text-primary"></i> Dashboard Quản Trị
                 </h2>
                 <p class="lead text-muted">
                     Chào mừng <strong th:text="${username}">Admin</strong> đến với hệ thống quản lý bán hàng!
@@ -108,96 +185,118 @@
             </div>
         </div>
 
-        <!-- Statistics Cards for Admin -->
-        <div class="row">
-            <div class="col-md-3 mb-4">
-                <div class="card dashboard-card stat-card">
-                    <div class="card-body text-center">
+        <!-- Statistics Cards -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-3">
+                <div class="card dashboard-card stat-card text-center">
+                    <div class="card-body">
                         <i class="fas fa-box fa-3x mb-3"></i>
-                        <h3 th:text="${totalProducts ?: 11}">11</h3>
+                        <h3 th:text="${totalProducts ?: 15}">15</h3>
                         <p class="card-text">Sản Phẩm</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 mb-4">
-                <div class="card dashboard-card stat-card">
-                    <div class="card-body text-center">
+            <div class="col-md-3">
+                <div class="card dashboard-card stat-card text-center">
+                    <div class="card-body">
                         <i class="fas fa-users fa-3x mb-3"></i>
-                        <h3 th:text="${totalCustomers ?: 52}">52</h3>
+                        <h3 th:text="${totalCustomers ?: 23}">23</h3>
                         <p class="card-text">Khách Hàng</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 mb-4">
-                <div class="card dashboard-card stat-card">
-                    <div class="card-body text-center">
+            <div class="col-md-3">
+                <div class="card dashboard-card stat-card text-center">
+                    <div class="card-body">
                         <i class="fas fa-shopping-cart fa-3x mb-3"></i>
-                        <h3 th:text="${totalOrders ?: 107}">107</h3>
+                        <h3 th:text="${totalOrders ?: 78}">78</h3>
                         <p class="card-text">Đơn Hàng</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 mb-4">
-                <div class="card dashboard-card stat-card">
-                    <div class="card-body text-center">
+            <div class="col-md-3">
+                <div class="card dashboard-card stat-card text-center">
+                    <div class="card-body">
                         <i class="fas fa-dollar-sign fa-3x mb-3"></i>
-                        <h3 th:text="${totalRevenue ?: '106,002,000'}">106,002,000</h3>
+                        <h3 th:text="${totalRevenue ?: '151,057,300'}">151,057,300</h3>
                         <p class="card-text">Doanh Thu (VNĐ)</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Quick Access Cards for Admin -->
-        <div class="row quick-access-grid">
-            <div class="col-md-6 col-lg-3 mb-4">
-                <div class="card dashboard-card h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-plus-circle fa-3x text-success mb-3"></i>
-                        <h5 class="card-title">Quản Lý Sản Phẩm</h5>
-                        <p class="card-text">Thêm, sửa, xóa sản phẩm</p>
+        <!-- Quick Access Cards - Tất cả 5 chức năng trên 1 dòng -->
+        <div class="row quick-access-grid g-3">
+            <div class="col-lg col-md-6">
+                <div class="card dashboard-card quick-access-card h-100">
+                    <div class="card-body">
+                        <i class="fas fa-plus-circle quick-access-icon text-success"></i>
+                        <div>
+                            <h6 class="card-title">Quản Lý Sản Phẩm</h6>
+                            <p class="card-text small">Thêm, sửa, xóa sản phẩm trong hệ thống</p>
+                        </div>
                         <a href="/admin/products" class="btn btn-success">
                             <i class="fas fa-arrow-right"></i> Quản Lý
                         </a>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3 mb-4">
-                <div class="card dashboard-card h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-user-plus fa-3x text-info mb-3"></i>
-                        <h5 class="card-title">Quản Lý Khách Hàng</h5>
-                        <p class="card-text">Xem và quản lý thông tin khách hàng</p>
+            <div class="col-lg col-md-6">
+                <div class="card dashboard-card quick-access-card h-100">
+                    <div class="card-body">
+                        <i class="fas fa-user-plus quick-access-icon text-info"></i>
+                        <div>
+                            <h6 class="card-title">Quản Lý Khách Hàng</h6>
+                            <p class="card-text small">Xem và quản lý thông tin khách hàng</p>
+                        </div>
                         <a href="/admin/customers" class="btn btn-info">
                             <i class="fas fa-arrow-right"></i> Quản Lý
                         </a>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3 mb-4">
-                <div class="card dashboard-card h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-clipboard-list fa-3x text-warning mb-3"></i>
-                        <h5 class="card-title">Xử Lý Đơn Hàng</h5>
-                        <p class="card-text">Xem và xử lý đơn hàng của khách</p>
-                        <a href="/admin/orders" class="btn btn-warning">
+            <div class="col-lg col-md-6">
+                <div class="card dashboard-card quick-access-card h-100">
+                    <div class="card-body">
+                        <i class="fas fa-percent quick-access-icon text-secondary"></i>
+                        <div>
+                            <h6 class="card-title">Quản Lý Khuyến Mại</h6>
+                            <p class="card-text small">Quản lý các chương trình khuyến mại</p>
+                        </div>
+                        <a href="/admin/promotions" class="btn btn-secondary">
                             <i class="fas fa-arrow-right"></i> Quản Lý
                         </a>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3 mb-4">
-        <div class="card dashboard-card h-100">
-            <div class="card-body text-center">
-                <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
-                <h5 class="card-title">Xem Doanh Thu</h5>
-                <p class="card-text">Xem báo cáo doanh thu theo ngày/tháng</p>
-                <a href="/admin/revenue" class="btn btn-primary">
-                    <i class="fas fa-arrow-right"></i> Xem Doanh Thu
-                </a>
+            <div class="col-lg col-md-6">
+                <div class="card dashboard-card quick-access-card h-100">
+                    <div class="card-body">
+                        <i class="fas fa-clipboard-list quick-access-icon text-warning"></i>
+                        <div>
+                            <h6 class="card-title">Xử Lý Đơn Hàng</h6>
+                            <p class="card-text small">Xem và xử lý đơn hàng của khách</p>
+                        </div>
+                        <a href="/admin/orders" class="btn btn-warning text-white">
+                            <i class="fas fa-arrow-right"></i> Quản Lý
+                        </a>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
+            <div class="col-lg col-md-6">
+                <div class="card dashboard-card quick-access-card h-100">
+                    <div class="card-body">
+                        <i class="fas fa-chart-line quick-access-icon text-primary"></i>
+                        <div>
+                            <h6 class="card-title">Xem Doanh Thu</h6>
+                            <p class="card-text small">Xem báo cáo doanh thu theo ngày/tháng</p>
+                        </div>
+                        <a href="/admin/revenue" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Xem Doanh Thu
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Error/Success messages -->
@@ -205,7 +304,6 @@
             <i class="fas fa-exclamation-triangle"></i>
             <span th:text="${error}"></span>
         </div>
-        
         <div th:if="${success}" class="alert alert-success mt-4" role="alert">
             <i class="fas fa-check-circle"></i>
             <span th:text="${success}"></span>

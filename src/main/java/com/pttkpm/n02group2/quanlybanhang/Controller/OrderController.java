@@ -3,8 +3,8 @@ package com.pttkpm.n02group2.quanlybanhang.Controller;
 import com.pttkpm.n02group2.quanlybanhang.Model.Order;
 import com.pttkpm.n02group2.quanlybanhang.Model.OrderItem;
 import com.pttkpm.n02group2.quanlybanhang.Service.OrderService;
-import com.pttkpm.n02group2.quanlybanhang.Model.OrderRequest; // Cập nhật import từ Model
-import com.pttkpm.n02group2.quanlybanhang.Model.ApiResponse; // Cập nhật import từ Model
+import com.pttkpm.n02group2.quanlybanhang.Model.OrderRequest; 
+import com.pttkpm.n02group2.quanlybanhang.Model.ApiResponse; 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

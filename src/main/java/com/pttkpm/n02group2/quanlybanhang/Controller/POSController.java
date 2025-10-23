@@ -621,31 +621,37 @@ private LocalDate parseDateOfBirthSafely(String dobStr) {
 
             Map<String, Object> result = posService.processOrderAndUpdateCustomerAndInventory(orderRequest, cartItems, username);
 
-            if (Boolean.TRUE.equals(result.get("success"))) {
-                Long orderId = (Long) result.get("orderId");
-                String orderNumber = (String) result.get("orderNumber");
-                session.setAttribute("orderNumber", orderNumber);
-                session.setAttribute("orderId", orderId);
+            // ...existing code...
+if (Boolean.TRUE.equals(result.get("success"))) {
+    Long orderId = (Long) result.get("orderId");
+    String orderNumber = (String) result.get("orderNumber");
+    session.setAttribute("orderNumber", orderNumber);
+    session.setAttribute("orderId", orderId);
 
-                session.removeAttribute("cartItems");
+    session.removeAttribute("cartItems");
 
-                Boolean vipRequestCreated = (Boolean) result.get("vipRequestCreated");
-                StringBuilder successMsg = new StringBuilder();
-                successMsg.append("<b>Đơn hàng ").append(orderNumber)
-                    .append(" (ID: ").append(orderId).append(")</b> đã được tạo thành công!<br>");
-                successMsg.append("Tổng tiền: <b>").append(finalAmount).append(" VND</b><br>");
-                successMsg.append("Thời gian: ").append(java.time.LocalDateTime.now()).append("<br>");
-                if (vipRequestCreated != null && vipRequestCreated) {
-                    successMsg.append("<span style='color:green'>Yêu cầu VIP đã được tạo và đang chờ admin xác nhận!</span><br>");
-                }
-                successMsg.append("Bạn có thể <b>in hóa đơn</b> hoặc bắt đầu giao dịch mới.");
+    Boolean vipRequestCreated = (Boolean) result.get("vipRequestCreated");
+    StringBuilder successMsg = new StringBuilder();
+    successMsg.append("<b>Đơn hàng ").append(orderNumber)
+        .append(" (ID: ").append(orderId).append(")</b> đã được tạo thành công!<br>");
+    successMsg.append("Tổng tiền: <b>").append(finalAmount).append(" VND</b><br>");
+    // Định dạng thời gian
+    String createdAt = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
+    successMsg.append("Thời gian: ").append(createdAt).append("<br>");
+    if (vipRequestCreated != null && vipRequestCreated) {
+        successMsg.append("<span style='color:green'>Yêu cầu VIP đã được tạo và đang chờ admin xác nhận!</span><br>");
+    }
+    successMsg.append("Bạn có thể <b>in hóa đơn</b> hoặc bắt đầu giao dịch mới.");
 
-                redirectAttributes.addFlashAttribute("success", successMsg.toString());
-                redirectAttributes.addFlashAttribute("orderId", orderId);
-                redirectAttributes.addFlashAttribute("orderNumber", orderNumber);
-                redirectAttributes.addFlashAttribute("finalAmount", finalAmount);
+    redirectAttributes.addFlashAttribute("success", successMsg.toString());
+    redirectAttributes.addFlashAttribute("orderId", orderId);
+    redirectAttributes.addFlashAttribute("orderNumber", orderNumber);
+    redirectAttributes.addFlashAttribute("finalAmount", finalAmount);
+    redirectAttributes.addFlashAttribute("createdAt", createdAt); // <-- Thêm dòng này
 
-                return "redirect:/user/pos/payment";
+    return "redirect:/user/pos/payment";
+
+
             } else {
                 redirectAttributes.addFlashAttribute("error", "Lỗi khi tạo đơn hàng: " + result.get("message"));
                 return "redirect:/user/pos/payment";
@@ -768,9 +774,6 @@ private LocalDate parseDateOfBirthSafely(String dobStr) {
 
     // ==================== HELPER METHODS FOR DATE PARSING ====================
 
-    /**
-     * Parse date of birth from various formats
-     */
     private LocalDate parseDateOfBirth(String dobStr) {
         if (dobStr == null || dobStr.trim().isEmpty()) {
             return null;
@@ -962,7 +965,7 @@ public Map<String, Object> getReceiptData(@PathVariable Long orderId) {
                 customerMap.put("province", null);
                 customerMap.put("dateOfBirth", null);
                 customerMap.put("vip", false);
-                customerMap.put("pendingVip", false); // Thêm pendingVip
+                customerMap.put("pendingVip", false); 
                 data.put("customer", customerMap);
             }
             

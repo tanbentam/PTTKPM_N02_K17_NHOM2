@@ -31,8 +31,8 @@ public class Customer {
     private String email;
 
     // Thông tin mua hàng cho VIP
-    @Column(name = "total_spent", columnDefinition = "DECIMAL(10,2) DEFAULT 0")
-    private Double totalSpent = 0.0;
+@Column(name = "total_spent", columnDefinition = "DECIMAL(12,2) DEFAULT 0")
+private Double totalSpent = 0.0;
 
     @Column(name = "order_count", columnDefinition = "INT DEFAULT 0")
     private Integer orderCount = 0;
@@ -166,20 +166,7 @@ public class Customer {
         return this.isVip != null && this.isVip && this.vipDiscountPercent != null && this.vipDiscountPercent > 0;
     }
 
-    public String getVipLevel() {
-        if (!canGetVipDiscount()) {
-            return "Regular";
-        }
-        double discount = this.vipDiscountPercent != null ? this.vipDiscountPercent : 0.0;
-        if (discount >= 10.0) {
-            return "Diamond";
-        } else if (discount >= 7.0) {
-            return "Gold";
-        } else if (discount >= 5.0) {
-            return "Silver";
-        }
-        return "Regular";
-    }
+
 
     // Helper method để lấy địa chỉ đầy đủ
     public String getFullAddress() {
@@ -251,7 +238,6 @@ public class Customer {
                 ", email=" + email +
                 ", totalSpent=" + totalSpent +
                 ", orderCount=" + orderCount +
-                ", vipLevel='" + getVipLevel() + '\'' +
                 ", pendingVip=" + pendingVip +
                 '}';
     }

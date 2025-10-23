@@ -40,14 +40,14 @@
                                   (#strings.isEmpty(selectedCustomer.district) ? '' : selectedCustomer.district + ', ') + 
                                   (#strings.isEmpty(selectedCustomer.province) ? '' : selectedCustomer.province)}"></span>
                 </div>
-                <!-- ...existing code... -->
+           
 <div class="mb-3" th:if="${selectedCustomer != null}">
     <strong>Ngày sinh:</strong>
     <span th:if="${selectedCustomer.dateOfBirth != null && !#strings.isEmpty(selectedCustomer.dateOfBirth)}" 
           th:text="${selectedCustomer.dateOfBirth}"></span>
     <span th:if="${selectedCustomer.dateOfBirth == null || #strings.isEmpty(selectedCustomer.dateOfBirth)}">Chưa có thông tin</span>
 </div>
-<!-- ...existing code... -->
+
                 <div class="mb-3" th:if="${selectedCustomer != null}">
                     <strong>Loại khách:</strong>
                     <span th:text="${selectedCustomer.vip ? 'VIP' : (selectedCustomer.pendingVip ? 'Chờ xác nhận VIP' : 'Thường')}"></span>
@@ -155,11 +155,16 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-center">
-                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-                    <h4 th:utext="${success}"></h4>
-                    <input type="hidden" id="orderIdInput" th:value="${orderId}" />
-                    <p th:if="${vipMessage != null}" th:text="${vipMessage}"></p>
-                </div>
+    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+    <h4>
+        Đơn hàng <b th:text="${orderNumber}"></b> (ID: <b th:text="${orderId}"></b>) đã được tạo thành công!<br>
+        Tổng tiền: <b th:text="${#numbers.formatDecimal(finalAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></b><br>
+        Thời gian: <span th:text="${createdAt}"></span><br>
+        Bạn có thể <b>in hóa đơn</b> hoặc bắt đầu giao dịch mới.
+    </h4>
+    <input type="hidden" id="orderIdInput" th:value="${orderId}" />
+    <p th:if="${vipMessage != null}" th:text="${vipMessage}"></p>
+</div>
                 <div class="modal-footer">
                     <button class="btn btn-success" onclick="showReceiptModal()">
                         <i class="fas fa-print"></i> In Hóa Đơn

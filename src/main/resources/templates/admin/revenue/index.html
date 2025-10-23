@@ -250,11 +250,11 @@
                                             order.finalAmount : order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ'}">
                                     </td>
                                     <td class="text-center">
-                                        <a th:href="@{'/admin/orders/' + ${order.id}}"
-                                           class="btn btn-sm btn-outline-info">
-                                            <i class="bi bi-eye"></i> Chi tiết
-                                        </a>
-                                    </td>
+    <a th:href="@{/admin/revenue/view/{id}(id=${order.id})}"
+       class="btn btn-sm btn-outline-info">
+        <i class="bi bi-eye"></i> Chi tiết
+    </a>
+</td>
                                 </tr>
                                 <tr th:if="${orders.empty}">
                                     <td colspan="6" class="text-center py-4">

@@ -2,6 +2,8 @@ package com.pttkpm.n02group2.quanlybanhang.Controller;
 
 import com.pttkpm.n02group2.quanlybanhang.Model.Order;
 import com.pttkpm.n02group2.quanlybanhang.Model.User;
+import com.pttkpm.n02group2.quanlybanhang.Model.Customer;
+import com.pttkpm.n02group2.quanlybanhang.Model.OrderItem;
 import com.pttkpm.n02group2.quanlybanhang.Service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -10,14 +12,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
+
 import jakarta.servlet.http.HttpSession;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/revenue")
@@ -131,5 +132,50 @@ public class RevenueController {
         model.addAttribute("pageSize", size);
 
         return "admin/revenue/index";
+    }
+
+    // Trang xem chi tiết hóa đơn doanh thu
+    @GetMapping("/view/{id}")
+    public String viewOrder(@PathVariable Long id, Model model, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            return "redirect:/login";
+        }
+
+        Order order = orderService.findById(id);
+        if (order == null) {
+            return "redirect:/admin/revenue";
+        }
+        Customer customer = order.getCustomer();
+        List<OrderItem> orderItems = order.getItems();
+
+        double originalTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0;
+        double actualDiscount = order.getVipDiscountAmount() != null ? order.getVipDiscountAmount() : 0;
+        double actualPaidAmount = order.getFinalAmount() != null ? order.getFinalAmount() : originalTotal - actualDiscount;
+        boolean hasDiscount = actualDiscount > 0;
+
+        // Chuyển đổi phương thức thanh toán sang tiếng Việt
+        String paymentMethodVN;
+        String method = order.getPaymentMethod();
+        if ("CASH".equalsIgnoreCase(method)) {
+            paymentMethodVN = "Tiền mặt";
+        } else if ("TRANSFER".equalsIgnoreCase(method)) {
+            paymentMethodVN = "Chuyển khoản";
+        } else if ("CARD".equalsIgnoreCase(method)) {
+            paymentMethodVN = "Thẻ";
+        } else {
+            paymentMethodVN = "Chưa xác định";
+        }
+
+        model.addAttribute("order", order);
+        model.addAttribute("customer", customer);
+        model.addAttribute("orderItems", orderItems);
+        model.addAttribute("originalTotal", originalTotal);
+        model.addAttribute("actualDiscount", actualDiscount);
+        model.addAttribute("actualPaidAmount", actualPaidAmount);
+        model.addAttribute("hasDiscount", hasDiscount);
+        model.addAttribute("paymentMethodVN", paymentMethodVN);
+
+        return "admin/revenue/view";
     }
 }

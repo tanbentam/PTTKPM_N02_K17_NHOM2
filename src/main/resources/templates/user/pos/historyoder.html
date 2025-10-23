@@ -32,7 +32,7 @@
         <div style="margin-bottom:8px; font-size:11px; font-weight:900;">
             <div>Số HĐ: <span th:text="${order.orderNumber}" style="font-weight:900;"></span></div>
             <div>Ngày: <span th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}" style="font-weight:900;"></span></div>
-            <div>Thu ngân: <span th:text="${cashierName != null ? cashierName : 'Admin'}" style="font-weight:900;"></span></div>
+            <div>Thu ngân: <span th:text="${order.createdBy != null ? order.createdBy : 'Admin'}" style="font-weight:900;"></span></div>
         </div>
 
         <div style="border-top:2px dashed #000; margin:6px 0;"></div>

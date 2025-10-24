@@ -31,8 +31,10 @@ public class Customer {
     private String email;
 
     // Thông tin mua hàng cho VIP
-@Column(name = "total_spent", columnDefinition = "DECIMAL(12,2) DEFAULT 0")
-private Double totalSpent = 0.0;
+@Column(name = "total_spent", columnDefinition = "DECIMAL(20,5) DEFAULT 0")
+private Double totalSpent = 0.0; 
+
+
 
     @Column(name = "order_count", columnDefinition = "INT DEFAULT 0")
     private Integer orderCount = 0;

@@ -52,6 +52,11 @@ public List<Order> findOrdersByDateRange(LocalDate from, LocalDate to) {
     public List<Order> findAllOrders() {
     return orderRepository.findAll();
 }
+
+
+// ==================== PHÂN TRANG METHODS THEO USER ====================
+
+
     // ==================== EXISTING METHODS ====================
 
     public Page<Order> findByCustomerId(Long customerId, Pageable pageable) {

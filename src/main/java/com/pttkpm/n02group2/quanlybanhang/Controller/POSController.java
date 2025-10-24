@@ -620,8 +620,6 @@ private LocalDate parseDateOfBirthSafely(String dobStr) {
             orderRequest.setPaymentMethod(paymentMethod);
 
             Map<String, Object> result = posService.processOrderAndUpdateCustomerAndInventory(orderRequest, cartItems, username);
-
-            // ...existing code...
 if (Boolean.TRUE.equals(result.get("success"))) {
     Long orderId = (Long) result.get("orderId");
     String orderNumber = (String) result.get("orderNumber");
@@ -647,11 +645,8 @@ if (Boolean.TRUE.equals(result.get("success"))) {
     redirectAttributes.addFlashAttribute("orderId", orderId);
     redirectAttributes.addFlashAttribute("orderNumber", orderNumber);
     redirectAttributes.addFlashAttribute("finalAmount", finalAmount);
-    redirectAttributes.addFlashAttribute("createdAt", createdAt); // <-- Thêm dòng này
-
+    redirectAttributes.addFlashAttribute("createdAt", createdAt); 
     return "redirect:/user/pos/payment";
-
-
             } else {
                 redirectAttributes.addFlashAttribute("error", "Lỗi khi tạo đơn hàng: " + result.get("message"));
                 return "redirect:/user/pos/payment";

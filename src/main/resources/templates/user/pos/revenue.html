@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doanh Thu - Quản Lý Bán Hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .revenue-card {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .revenue-amount { font-size: 2.5rem; font-weight: bold; }
+        .search-form {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .table thead th {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+            border: none;
+            padding: 15px 10px;
+            font-weight: 600;
+        }
+        .table tbody tr:hover { background-color: #f8f9fa; }
+        .btn-view {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 5px 15px;
+            transition: all 0.3s;
+        }
+        .btn-view:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            color: white;
+        }
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 10px 15px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        }
+        .btn-search {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 25px;
+            font-weight: 600;
+        }
+        .pagination .page-link {
+            border-radius: 8px;
+            margin: 0 2px;
+            border: 2px solid #e9ecef;
+        }
+        .pagination .page-item.active .page-link {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid px-4 py-3">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12 d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-dark"><i class="fas fa-chart-line me-2"></i>Doanh số bán hàng</h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a th:href="@{/user/pos}" class="text-decoration-none">POS</a></li>
+                            <li class="breadcrumb-item active">Doanh Thu</li>
+                        </ol>
+                    </nav>
+                </div>
+                <a th:href="@{/user/pos}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Quay về POS
+                </a>
+            </div>
+        </div>
+
+        <!-- Revenue Summary -->
+        <div class="row">
+            <div class="col-12">
+                <div class="revenue-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-2"><i class="fas fa-money-bill-wave me-2"></i>Tổng Doanh Thu</h4>
+                            <div class="revenue-amount" th:text="${totalRevenue} + ' VNĐ'">0 VNĐ</div>
+                            <p class="mb-0 opacity-75">
+                                <span th:if="${from != null and to != null}">
+                                    Từ <span th:text="${#temporals.format(from, 'dd/MM/yyyy')}"></span> 
+                                    đến <span th:text="${#temporals.format(to, 'dd/MM/yyyy')}"></span>
+                                </span>
+                                <span th:unless="${from != null and to != null}">Tổng doanh thu toàn thời gian</span>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <i class="fas fa-chart-bar" style="font-size: 4rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="search-form">
+            <form method="get" th:action="@{/user/pos/revenue}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Loại thống kê:</label>
+                        <select class="form-select" name="summaryType" id="summaryType" onchange="toggleInputs()">
+                            <option value="all" th:selected="${summaryType == 'all'}">Tất cả thời gian</option>
+                            <option value="day" th:selected="${summaryType == 'day'}">Theo ngày</option>
+                            <option value="week" th:selected="${summaryType == 'week'}">Theo tuần</option>
+                            <option value="month" th:selected="${summaryType == 'month'}">Theo tháng</option>
+                            <option value="year" th:selected="${summaryType == 'year'}">Theo năm</option>
+                            <option value="range" th:selected="${summaryType == 'range'}">Khoảng thời gian</option>
+                        </select>
+                    </div>
+
+                    <!-- Theo ngày -->
+                    <div class="col-md-2" id="dayDiv" style="display: none;">
+                        <label class="form-label fw-bold">Chọn ngày:</label>
+                        <input type="date" class="form-control" name="selectedDate" id="selectedDate" th:value="${selectedDate}">
+                    </div>
+
+                    <!-- Theo tuần -->
+                    <div class="col-md-2" id="weekMonthDiv" style="display: none;">
+                        <label class="form-label fw-bold">Tháng:</label>
+                        <select class="form-select" name="selectedWeekMonth" id="selectedWeekMonth">
+                            <option th:each="m : ${#numbers.sequence(1,12)}"
+                                    th:value="${m}" th:text="'Tháng ' + ${m}"
+                                    th:selected="${selectedWeekMonth == m}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2" id="weekYearDiv" style="display: none;">
+                        <label class="form-label fw-bold">Năm:</label>
+                        <select class="form-select" name="selectedWeekYear" id="selectedWeekYear">
+                            <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${selectedWeekYear == y}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2" id="weekNumberDiv" style="display: none;">
+                        <label class="form-label fw-bold">Tuần:</label>
+                        <select class="form-select" name="selectedWeekNumber" id="selectedWeekNumber">
+                            <option th:each="w : ${#numbers.sequence(1,5)}"
+                                    th:value="${w}" th:text="'Tuần ' + ${w}"
+                                    th:selected="${selectedWeekNumber == w}"></option>
+                        </select>
+                    </div>
+
+                    <!-- Theo tháng -->
+                    <div class="col-md-2" id="monthDiv" style="display: none;">
+                        <label class="form-label fw-bold">Tháng:</label>
+                        <select class="form-select" name="selectedMonth" id="selectedMonth">
+                            <option th:each="m : ${#numbers.sequence(1,12)}"
+                                    th:value="${m}" th:text="'Tháng ' + ${m}"
+                                    th:selected="${selectedMonth == m}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2" id="monthYearDiv" style="display: none;">
+                        <label class="form-label fw-bold">Năm:</label>
+                        <select class="form-select" name="selectedMonthYear" id="selectedMonthYear">
+                            <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${selectedMonthYear == y}"></option>
+                        </select>
+                    </div>
+
+                    <!-- Theo năm -->
+                    <div class="col-md-2" id="yearDiv" style="display: none;">
+                        <label class="form-label fw-bold">Chọn năm:</label>
+                        <select class="form-select" name="selectedYear" id="selectedYear">
+                            <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${selectedYear == y}"></option>
+                        </select>
+                    </div>
+
+                    <!-- Theo khoảng thời gian -->
+                    <div class="col-md-2" id="fromDateDiv" style="display: none;">
+                        <label class="form-label fw-bold">Từ ngày:</label>
+                        <input type="date" class="form-control" name="from" id="fromDate" th:value="${from}">
+                    </div>
+                    <div class="col-md-2" id="toDateDiv" style="display: none;">
+                        <label class="form-label fw-bold">Đến ngày:</label>
+                        <input type="date" class="form-control" name="to" id="toDate" th:value="${to}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label d-none d-md-block">&nbsp;</label>
+                        <button type="submit" class="btn btn-search w-100">
+                            <i class="fas fa-search me-1"></i>Tìm kiếm
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%"><i class="fas fa-hashtag me-1"></i>Mã đơn</th>
+                            <th style="width: 20%"><i class="fas fa-user me-1"></i>Khách hàng</th>
+                            <th style="width: 15%"><i class="fas fa-calendar me-1"></i>Ngày tạo</th>
+                            <th style="width: 15%"><i class="fas fa-money-bill me-1"></i>Thành tiền</th>
+                            <th style="width: 13%"><i class="fas fa-credit-card me-1"></i>Phương thức</th>
+                            <th style="width: 15%"><i class="fas fa-user-tie me-1"></i>Nhân viên</th>
+                            <th style="width: 10%" class="text-center"><i class="fas fa-cog me-1"></i>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="order : ${orders}">
+                            <td>
+                                <span class="badge bg-primary fs-6" th:text="${order.orderNumber}"></span>
+                            </td>
+                            <td th:text="${order.customer != null ? order.customer.name : 'Khách lẻ'}"></td>
+                            <td th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+                            <td class="fw-bold text-success" th:text="${#numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></td>
+                            <td>
+                                <span class="badge bg-info" th:text="${order.paymentMethod}"></span>
+                            </td>
+                            <td th:text="${order.createdBy}"></td>
+                            <td class="text-center">
+                                <a th:href="@{'/user/pos/revenue/view/' + ${order.id}}" class="btn btn-view btn-sm">
+                                    <i class="fas fa-eye me-1"></i>Xem
+                                </a>
+                            </td>
+                        </tr>
+                        <tr th:if="${orders == null or #lists.isEmpty(orders)}">
+                            <td colspan="7" class="text-center py-4">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <br>
+                                <span class="text-muted">Không có dữ liệu để hiển thị</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="row mt-4" th:if="${orderPage != null and orderPage.totalPages > 1}">
+            <div class="col-12">
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item" th:classappend="${orderPage.first} ? 'disabled'">
+                            <a class="page-link" th:href="@{/user/pos/revenue(page=${orderPage.number - 1}, size=${orderPage.size}, summaryType=${summaryType}, selectedDate=${selectedDate}, selectedWeekMonth=${selectedWeekMonth}, selectedWeekYear=${selectedWeekYear}, selectedWeekNumber=${selectedWeekNumber}, selectedMonth=${selectedMonth}, selectedMonthYear=${selectedMonthYear}, selectedYear=${selectedYear}, from=${from}, to=${to})}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item" th:each="i : ${#numbers.sequence(0, orderPage.totalPages - 1)}"
+                            th:classappend="${orderPage.number == i} ? 'active'">
+                            <a class="page-link" th:href="@{/user/pos/revenue(page=${i}, size=${orderPage.size}, summaryType=${summaryType}, selectedDate=${selectedDate}, selectedWeekMonth=${selectedWeekMonth}, selectedWeekYear=${selectedWeekYear}, selectedWeekNumber=${selectedWeekNumber}, selectedMonth=${selectedMonth}, selectedMonthYear=${selectedMonthYear}, selectedYear=${selectedYear}, from=${from}, to=${to})}" th:text="${i + 1}"></a>
+                        </li>
+                        <li class="page-item" th:classappend="${orderPage.last} ? 'disabled'">
+                            <a class="page-link" th:href="@{/user/pos/revenue(page=${orderPage.number + 1}, size=${orderPage.size}, summaryType=${summaryType}, selectedDate=${selectedDate}, selectedWeekMonth=${selectedWeekMonth}, selectedWeekYear=${selectedWeekYear}, selectedWeekNumber=${selectedWeekNumber}, selectedMonth=${selectedMonth}, selectedMonthYear=${selectedMonthYear}, selectedYear=${selectedYear}, from=${from}, to=${to})}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleInputs() {
+            var summaryType = document.getElementById('summaryType').value;
+            // Ẩn tất cả các input
+            document.getElementById('dayDiv').style.display = 'none';
+            document.getElementById('weekMonthDiv').style.display = 'none';
+            document.getElementById('weekYearDiv').style.display = 'none';
+            document.getElementById('weekNumberDiv').style.display = 'none';
+            document.getElementById('monthDiv').style.display = 'none';
+            document.getElementById('monthYearDiv').style.display = 'none';
+            document.getElementById('yearDiv').style.display = 'none';
+            document.getElementById('fromDateDiv').style.display = 'none';
+            document.getElementById('toDateDiv').style.display = 'none';
+
+            if (summaryType === 'day') {
+                document.getElementById('dayDiv').style.display = 'block';
+            } else if (summaryType === 'week') {
+                document.getElementById('weekMonthDiv').style.display = 'block';
+                document.getElementById('weekYearDiv').style.display = 'block';
+                document.getElementById('weekNumberDiv').style.display = 'block';
+            } else if (summaryType === 'month') {
+                document.getElementById('monthDiv').style.display = 'block';
+                document.getElementById('monthYearDiv').style.display = 'block';
+            } else if (summaryType === 'year') {
+                document.getElementById('yearDiv').style.display = 'block';
+            } else if (summaryType === 'range') {
+                document.getElementById('fromDateDiv').style.display = 'block';
+                document.getElementById('toDateDiv').style.display = 'block';
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleInputs();
+        });
+    </script>
+</body>
+</html>

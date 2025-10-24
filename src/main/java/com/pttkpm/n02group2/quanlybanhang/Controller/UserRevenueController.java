@@ -1,0 +1,173 @@
+package com.pttkpm.n02group2.quanlybanhang.Controller;
+
+import com.pttkpm.n02group2.quanlybanhang.Model.Order;
+import com.pttkpm.n02group2.quanlybanhang.Model.OrderItem;
+import com.pttkpm.n02group2.quanlybanhang.Model.Customer;
+import com.pttkpm.n02group2.quanlybanhang.Service.OrderService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+import java.util.List;
+
+@Controller
+@RequestMapping("/user/pos/revenue")
+public class UserRevenueController {
+    
+    @Autowired
+    private OrderService orderService;
+
+    @GetMapping("")
+    public String revenuePage(
+            @RequestParam(value = "summaryType", required = false, defaultValue = "day") String summaryType,
+            @RequestParam(value = "selectedDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate selectedDate,
+            @RequestParam(value = "selectedMonth", required = false) Integer selectedMonth,
+            @RequestParam(value = "selectedMonthYear", required = false) Integer selectedMonthYear,
+            @RequestParam(value = "selectedYear", required = false) Integer selectedYear,
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(value = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(value = "size", required = false, defaultValue = "10") int size,
+            Model model) {
+
+        LocalDate now = LocalDate.now();
+
+        // Mặc định hiển thị doanh số và đơn hàng của ngày thực tế
+        if (selectedDate == null && "day".equals(summaryType)) {
+            selectedDate = now;
+        }
+        if (selectedMonth == null && "month".equals(summaryType)) {
+            selectedMonth = now.getMonthValue();
+        }
+        if (selectedMonthYear == null && "month".equals(summaryType)) {
+            selectedMonthYear = now.getYear();
+        }
+        if (selectedYear == null && "year".equals(summaryType)) {
+            selectedYear = now.getYear();
+        }
+        if (from == null && "range".equals(summaryType)) {
+            from = now;
+        }
+        if (to == null && "range".equals(summaryType)) {
+            to = now;
+        }
+
+        // Xử lý logic theo summaryType
+        switch (summaryType) {
+            case "day":
+                if (selectedDate != null) {
+                    from = selectedDate;
+                    to = selectedDate;
+                }
+                break;
+            case "month":
+                if (selectedMonth != null && selectedMonthYear != null) {
+                    from = LocalDate.of(selectedMonthYear, selectedMonth, 1);
+                    to = from.with(TemporalAdjusters.lastDayOfMonth());
+                }
+                break;
+            case "year":
+                if (selectedYear != null) {
+                    from = LocalDate.of(selectedYear, 1, 1);
+                    to = LocalDate.of(selectedYear, 12, 31);
+                }
+                break;
+            case "range":
+                // from và to đã được set từ parameter hoặc mặc định
+                break;
+            default: // "all"
+                from = null;
+                to = null;
+                break;
+        }
+
+        // Tạo Pageable object
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Order> orderPage;
+        
+        // Lấy dữ liệu đơn hàng theo khoảng thời gian
+        if (from != null && to != null) {
+            orderPage = orderService.findOrdersByDateRange(from, to, pageable);
+        } else {
+            orderPage = orderService.findAllOrders(pageable);
+        }
+
+        // Tính tổng doanh thu của tất cả hóa đơn (không chỉ trang hiện tại)
+        double totalRevenue;
+        if (from != null && to != null) {
+            totalRevenue = orderService.findOrdersByDateRange(from, to)
+                    .stream()
+                    .mapToDouble(order -> order.getFinalAmount() != null ? order.getFinalAmount() : order.getTotalAmount())
+                    .sum();
+        } else {
+            totalRevenue = orderService.findAllOrders()
+                    .stream()
+                    .mapToDouble(order -> order.getFinalAmount() != null ? order.getFinalAmount() : order.getTotalAmount())
+                    .sum();
+        }
+
+        // Thêm các attribute vào model
+        model.addAttribute("orders", orderPage.getContent());
+        model.addAttribute("orderPage", orderPage);
+        model.addAttribute("from", from);
+        model.addAttribute("to", to);
+        model.addAttribute("summaryType", summaryType);
+        model.addAttribute("selectedDate", selectedDate);
+        model.addAttribute("selectedMonth", selectedMonth);
+        model.addAttribute("selectedMonthYear", selectedMonthYear);
+        model.addAttribute("selectedYear", selectedYear);
+        model.addAttribute("totalRevenue", String.format("%,.0f", totalRevenue));
+        model.addAttribute("currentPage", page);
+        model.addAttribute("pageSize", size);
+
+        return "user/pos/revenue";
+    }
+
+    // Trang xem chi tiết hóa đơn doanh thu
+    @GetMapping("/view/{id}")
+    public String viewOrder(@PathVariable Long id, Model model) {
+        Order order = orderService.findById(id);
+        if (order == null) {
+            return "redirect:/user/pos/revenue";
+        }
+        
+        Customer customer = order.getCustomer();
+        List<OrderItem> orderItems = order.getItems();
+
+        double originalTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0;
+        double actualDiscount = order.getVipDiscountAmount() != null ? order.getVipDiscountAmount() : 0;
+        double actualPaidAmount = order.getFinalAmount() != null ? order.getFinalAmount() : originalTotal - actualDiscount;
+        boolean hasDiscount = actualDiscount > 0;
+
+        // Chuyển đổi phương thức thanh toán sang tiếng Việt
+        String paymentMethodVN;
+        String method = order.getPaymentMethod();
+        if ("CASH".equalsIgnoreCase(method)) {
+            paymentMethodVN = "Tiền mặt";
+        } else if ("TRANSFER".equalsIgnoreCase(method)) {
+            paymentMethodVN = "Chuyển khoản";
+        } else if ("CARD".equalsIgnoreCase(method)) {
+            paymentMethodVN = "Thẻ";
+        } else {
+            paymentMethodVN = "Chưa xác định";
+        }
+
+        model.addAttribute("order", order);
+        model.addAttribute("customer", customer);
+        model.addAttribute("orderItems", orderItems);
+        model.addAttribute("originalTotal", originalTotal);
+        model.addAttribute("actualDiscount", actualDiscount);
+        model.addAttribute("actualPaidAmount", actualPaidAmount);
+        model.addAttribute("hasDiscount", hasDiscount);
+        model.addAttribute("paymentMethodVN", paymentMethodVN);
+
+        return "user/pos/revenue/view";
+    }
+}

@@ -200,6 +200,19 @@ public class ProductService {
         return productRepository.findByQuantityGreaterThan(0);
     }
 
+    // Lấy tất cả sản phẩm không phân trang.
+public List<Product> findAll() {
+    return productRepository.findAll();
+}
+// Trong ProductService.java
+public Product findById(Long id) {
+    return productRepository.findById(id).orElse(null);
+}
+
+public Product save(Product product) {
+        return productRepository.save(product);
+    }
+
     // ==================== PAGINATED METHODS ====================
 
     // Lấy tất cả sản phẩm có phân trang, sắp xếp theo ID giảm dần.

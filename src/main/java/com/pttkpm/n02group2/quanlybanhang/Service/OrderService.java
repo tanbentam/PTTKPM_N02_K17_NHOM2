@@ -54,6 +54,17 @@ public List<Order> findOrdersByDateRange(LocalDate from, LocalDate to) {
 }
 
 
+public Order save(Order order) {
+    return orderRepository.save(order);
+}
+
+
+// OrderService.java
+
+
+public List<Order> findByStatus(Order.OrderStatus status) {
+    return orderRepository.findByStatus(status);
+}
 // ==================== PHÂN TRANG METHODS THEO USER ====================
 
 

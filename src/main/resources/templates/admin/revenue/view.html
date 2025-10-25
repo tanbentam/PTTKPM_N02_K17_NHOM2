@@ -46,10 +46,11 @@
                                 <p><strong>Ngày tạo:</strong> <span th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2025 10:30</span></p>
                                 <p><strong>Trạng thái:</strong>
     <span th:switch="${order.status}">
-        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).COMPLETED}" class="badge bg-success">Hoàn thành</span>
-        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).PENDING}" class="badge bg-warning text-dark">Đang xử lý</span>
-        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).CANCELLED}" class="badge bg-danger">Hủy</span>
-        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).RETURNED}" class="badge bg-info text-dark">Đã trả hàng</span>
+            <span th:switch="${order.status.name()}">
+        <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+        <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
+        <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+        <span th:case="'RETURNED'" class="badge bg-info text-dark">Đã trả hàng</span>
         <span th:case="*">Khác</span>
     </span>
 </p>

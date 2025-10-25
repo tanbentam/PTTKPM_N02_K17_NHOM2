@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
-
+import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
     
@@ -61,6 +61,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // Đếm sản phẩm theo danh mục
     long countByCategory(String category);
     
+
+    // Trong ProductRepository.java (nếu dùng Spring Data JPA)
+Optional<Product> findById(Long id);
     // ===== ADDITIONAL USEFUL METHODS =====
     
     // Tìm sản phẩm sắp hết hàng (quantity <= 10)

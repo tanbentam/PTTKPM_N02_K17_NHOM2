@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Phê duyệt yêu cầu đổi trả</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+        }
+        .product-table {
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .table thead th {
+            background-color: #495057;
+            color: white;
+            border: none;
+        }
+        .badge-custom {
+            font-size: 0.9em;
+            padding: 8px 12px;
+        }
+        .btn-action {
+            min-width: 120px;
+            font-weight: 500;
+        }
+        .info-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-exchange-alt me-2 text-primary"></i>Phê duyệt yêu cầu đổi trả</h2>
+        <a th:href="@{/admin/returns}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại danh sách
+        </a>
+    </div>
+
+    <!-- Thông báo -->
+    <div th:if="${message}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        <span th:text="${message}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Thông tin đơn hàng -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <i class="fas fa-info-circle me-2"></i>Thông tin đơn hàng
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <strong>Mã đơn hàng:</strong> 
+                        <span class="text-primary fw-bold" th:text="${order.orderNumber}"></span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Khách hàng:</strong> 
+                        <span th:text="${order.customer.name}"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <strong>Ngày đặt:</strong> 
+                        <span th:text="${#dates.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Trạng thái:</strong>
+                        <span th:switch="${order.status.name()}">
+                            <span th:case="'RETURN_REQUESTED'" class="badge bg-warning text-dark badge-custom">
+                                <i class="fas fa-clock me-1"></i>Chờ duyệt đổi trả
+                            </span>
+                            <span th:case="'RETURNED'" class="badge bg-info text-dark badge-custom">
+                                <i class="fas fa-undo me-1"></i>Đã trả hàng
+                            </span>
+                            <span th:case="'COMPLETED'" class="badge bg-success badge-custom">
+                                <i class="fas fa-check me-1"></i>Hoàn thành
+                            </span>
+                            <span th:case="'CANCELLED'" class="badge bg-danger badge-custom">
+                                <i class="fas fa-times me-1"></i>Đã hủy
+                            </span>
+                            <span th:case="*" class="badge bg-secondary badge-custom">Khác</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thông tin sản phẩm -->
+    <div class="row">
+        <!-- Sản phẩm muốn trả lại -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-minus-circle me-2"></i>Sản phẩm trả lại
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-box me-1"></i>Sản phẩm</th>
+                                    <th><i class="fas fa-money-bill me-1"></i>Giá</th>
+                                    <th><i class="fas fa-sort-numeric-up me-1"></i>SL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="item : ${order.items}">
+                                    <td>
+                                        <strong th:text="${item.product.name}"></strong>
+                                        <br><small class="text-muted">Mã: <span th:text="${item.product.id}"></span></small>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold" 
+                                              th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark" th:text="${item.quantity}"></span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sản phẩm muốn nhận -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-plus-circle me-2"></i>Sản phẩm muốn nhận
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-box me-1"></i>Sản phẩm</th>
+                                    <th><i class="fas fa-money-bill me-1"></i>Giá</th>
+                                    <th><i class="fas fa-sort-numeric-up me-1"></i>SL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="item : ${newItems}">
+                                    <td>
+                                        <strong th:text="${item.product.name}"></strong>
+                                        <br><small class="text-muted">Mã: <span th:text="${item.product.id}"></span></small>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold" 
+                                              th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark" th:text="${item.quantity}"></span>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(newItems)}">
+                                    <td colspan="3" class="text-center text-muted py-3">
+                                        <i class="fas fa-inbox me-2"></i>Không có sản phẩm muốn nhận
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thao tác -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-center gap-3">
+                <form th:action="@{'/admin/returns/' + ${order.id} + '/approve'}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-success btn-action" 
+                            th:disabled="${order.status.name() != 'RETURN_REQUESTED'}"
+                            onclick="return confirm('Bạn có chắc chắn muốn duyệt yêu cầu đổi trả này?')">
+                        <i class="fas fa-check me-2"></i>Duyệt yêu cầu
+                    </button>
+                </form>
+                
+                <form th:action="@{'/admin/returns/' + ${order.id} + '/reject'}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-danger btn-action" 
+                            th:disabled="${order.status.name() != 'RETURN_REQUESTED'}"
+                            onclick="return confirm('Bạn có chắc chắn muốn từ chối yêu cầu đổi trả này?')">
+                        <i class="fas fa-times me-2"></i>Từ chối
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Thông báo trạng thái -->
+            <div th:if="${order.status.name() != 'RETURN_REQUESTED'}" class="mt-3">
+                <div class="alert alert-info text-center mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span th:switch="${order.status.name()}">
+                        <span th:case="'RETURNED'">Yêu cầu đổi trả đã được duyệt</span>
+                        <span th:case="'COMPLETED'">Yêu cầu đổi trả đã bị từ chối</span>
+                        <span th:case="*">Đơn hàng không trong trạng thái chờ duyệt</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

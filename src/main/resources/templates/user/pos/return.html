@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Yêu cầu đổi trả hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h3 class="mb-3">Yêu cầu đổi trả cho đơn: <span th:text="${order.orderNumber}"></span></h3>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    <form th:action="@{'/user/pos/return/' + ${order.id}}" method="post" onsubmit="return beforeSubmit() && validateForm()">
+        <div class="mb-3">
+            <label class="form-label"><strong>Chọn sản phẩm đã mua muốn đổi:</strong></label>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Chọn</th>
+                        <th>Sản phẩm</th>
+                        <th>Giá thực tế đã thanh toán</th>
+                        <th>Số lượng đã mua</th>
+                        <th>Số lượng muốn đổi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="item, stat : ${order.items}">
+                        <td>
+                            <input type="checkbox" name="oldProductIds" th:value="${item.product.id}"
+                                   th:id="|old_checkbox_${stat.index}|"
+                                   th:onclick="|toggleOldQuantity(this, ${stat.index}, ${item.quantity})|">
+                        </td>
+                        <td th:text="${item.product.name}"></td>
+                        <td th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></td>
+                        <td th:text="${item.quantity}"></td>
+                        <td>
+                            <div class="input-group" style="max-width: 150px;">
+                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                        th:onclick="|decreaseOld(${stat.index})|"
+                                        th:id="|old_decrease_${stat.index}|" disabled>-</button>
+                                <input type="number" name="oldQuantities" min="1" th:max="${item.quantity}"
+                                       value="1" class="form-control text-center"
+                                       th:id="|old_quantity_${stat.index}|" disabled>
+                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                        th:onclick="|increaseOld(${stat.index}, ${item.quantity})|"
+                                        th:id="|old_increase_${stat.index}|" disabled>+</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Lọc sản phẩm muốn nhận:</strong></label>
+            <input type="text" id="productSearch" class="form-control mb-2"
+                   placeholder="Tìm kiếm sản phẩm..." onkeyup="searchProducts()">
+            <select class="form-select mb-2" id="categoryFilter" onchange="filterProducts()">
+                <option value="">Tất cả danh mục</option>
+                <option th:each="cat : ${categories}" th:value="${cat}" th:text="${cat}"></option>
+            </select>
+
+           <table class="table table-bordered" id="productsTable">
+    <thead>
+        <tr>
+            <th>Chọn</th>
+            <th>Sản phẩm</th>
+            <th>Danh mục</th>
+            <th>Giá</th>
+            <th>Tồn kho</th>
+            <th>Số lượng</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="product, stat : ${products}" th:attr="data-category=${product.category}">
+            <td>
+                <input type="checkbox" name="newProductIds" th:value="${product.id}"
+                       th:id="|new_checkbox_${stat.index}|"
+                       th:onclick="|toggleNewQuantity(this, ${stat.index}, ${product.quantity})|">
+            </td>
+            <td class="product-name" th:text="${product.name}"></td>
+            <td>
+                <span class="badge bg-primary" th:text="${product.category}"></span>
+            </td>
+            <td>
+                <span th:if="${product.discountPrice != null and product.discountPrice != product.price}">
+                    <del th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'" class="text-muted"></del>
+                    <span class="text-success fw-bold ms-2"
+                          th:text="${#numbers.formatDecimal(product.discountPrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                </span>
+                <span th:if="${product.discountPrice == null or product.discountPrice == product.price}"
+                      th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+            </td>
+            <td>
+                <span th:text="${product.quantity}"
+                      th:class="${product.quantity == 0} ? 'badge bg-danger' : 'badge bg-success'"></span>
+            </td>
+            <td>
+                <div class="input-group" style="max-width: 150px;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            th:onclick="|decreaseNew(${stat.index})|"
+                            th:id="|new_decrease_${stat.index}|" disabled>-</button>
+                    <input type="number" name="newQuantities" min="1" th:max="${product.quantity}"
+                           value="1" class="form-control text-center"
+                           th:id="|new_quantity_${stat.index}|"
+                           th:attr="data-stock=${product.quantity}" disabled>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            th:onclick="|increaseNew(${stat.index}, ${product.quantity})|"
+                            th:id="|new_increase_${stat.index}|" disabled>+</button>
+                </div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Lý do đổi trả:</strong></label>
+            <textarea name="reason" class="form-control" rows="3" required
+                      placeholder="Nhập lý do đổi trả..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Gửi yêu cầu đổi trả</button>
+        <a th:href="@{/user/pos/history}" class="btn btn-secondary ms-2">Quay lại</a>
+    </form>
+</div>
+
+<script>
+function toggleOldQuantity(checkbox, index, max) {
+    var quantityInput = document.getElementById('old_quantity_' + index);
+    var decreaseBtn = document.getElementById('old_decrease_' + index);
+    var increaseBtn = document.getElementById('old_increase_' + index);
+
+    if (checkbox.checked) {
+        quantityInput.disabled = false;
+        decreaseBtn.disabled = false;
+        increaseBtn.disabled = false;
+    } else {
+        quantityInput.disabled = true;
+        decreaseBtn.disabled = true;
+        increaseBtn.disabled = true;
+        quantityInput.value = 1;
+    }
+}
+
+function increaseOld(index, max) {
+    var input = document.getElementById('old_quantity_' + index);
+    var current = parseInt(input.value) || 1;
+    if (current < max) {
+        input.value = current + 1;
+    } else {
+        alert('Không thể vượt quá số lượng đã mua: ' + max);
+    }
+}
+
+function decreaseOld(index) {
+    var input = document.getElementById('old_quantity_' + index);
+    var current = parseInt(input.value) || 1;
+    if (current > 1) {
+        input.value = current - 1;
+    }
+}
+
+function toggleNewQuantity(checkbox, index, stock) {
+    var quantityInput = document.getElementById('new_quantity_' + index);
+    var decreaseBtn = document.getElementById('new_decrease_' + index);
+    var increaseBtn = document.getElementById('new_increase_' + index);
+
+    if (checkbox.checked) {
+        if (stock == 0) {
+            alert('Sản phẩm này đã hết hàng!');
+            checkbox.checked = false;
+            return;
+        }
+        quantityInput.disabled = false;
+        decreaseBtn.disabled = false;
+        increaseBtn.disabled = false;
+    } else {
+        quantityInput.disabled = true;
+        decreaseBtn.disabled = true;
+        increaseBtn.disabled = true;
+        quantityInput.value = 1;
+    }
+}
+
+function increaseNew(index, max) {
+    var input = document.getElementById('new_quantity_' + index);
+    var current = parseInt(input.value) || 1;
+    if (current < max) {
+        input.value = current + 1;
+    } else {
+        alert('Không thể vượt quá tồn kho: ' + max);
+    }
+}
+
+function decreaseNew(index) {
+    var input = document.getElementById('new_quantity_' + index);
+    var current = parseInt(input.value) || 1;
+    if (current > 1) {
+        input.value = current - 1;
+    }
+}
+
+function searchProducts() {
+    var search = document.getElementById('productSearch').value.toLowerCase();
+    var rows = document.querySelectorAll('#productsTable tbody tr');
+    rows.forEach(function(row) {
+        var name = row.querySelector('.product-name').textContent.toLowerCase();
+        if (name.includes(search)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function filterProducts() {
+    var category = document.getElementById('categoryFilter').value;
+    var rows = document.querySelectorAll('#productsTable tbody tr');
+    rows.forEach(function(row) {
+        if (!category || row.getAttribute('data-category') === category) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Đảm bảo chỉ gửi số lượng của sản phẩm đã chọn
+function beforeSubmit() {
+    // Sản phẩm đổi
+    var oldCheckboxes = document.querySelectorAll('input[name="oldProductIds"]');
+    var oldQuantities = document.querySelectorAll('input[name="oldQuantities"]');
+    for (let i = 0; i < oldCheckboxes.length; i++) {
+        if (!oldCheckboxes[i].checked) {
+            oldQuantities[i].disabled = true;
+        } else {
+            oldQuantities[i].disabled = false;
+        }
+    }
+    // Sản phẩm nhận
+    var newCheckboxes = document.querySelectorAll('input[name="newProductIds"]');
+    var newQuantities = document.querySelectorAll('input[name="newQuantities"]');
+    for (let i = 0; i < newCheckboxes.length; i++) {
+        if (!newCheckboxes[i].checked) {
+            newQuantities[i].disabled = true;
+        } else {
+            newQuantities[i].disabled = false;
+        }
+    }
+    return true;
+}
+
+function validateForm() {
+    var oldChecked = document.querySelectorAll('input[name="oldProductIds"]:checked');
+    var newChecked = document.querySelectorAll('input[name="newProductIds"]:checked');
+    var reason = document.querySelector('textarea[name="reason"]').value.trim();
+
+    if (oldChecked.length === 0) {
+        alert('Vui lòng chọn sản phẩm muốn đổi!');
+        return false;
+    }
+    if (newChecked.length === 0) {
+        alert('Vui lòng chọn sản phẩm muốn nhận!');
+        return false;
+    }
+    if (reason === '') {
+        alert('Vui lòng nhập lý do đổi trả!');
+        return false;
+    }
+    return true;
+}
+</script>
+</body>
+</html>

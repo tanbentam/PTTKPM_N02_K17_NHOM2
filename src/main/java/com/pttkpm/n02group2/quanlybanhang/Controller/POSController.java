@@ -366,7 +366,7 @@ public CustomerResponse createCustomer(
     @RequestParam(required = false) String ward,
     @RequestParam(required = false) String district,
     @RequestParam(required = false) String province,
-    @RequestParam(required = false, name = "dob") String dateOfBirth,  // ⬅️ THÊM name = "dob"
+    @RequestParam(required = false, name = "dob") String dateOfBirth,  
     HttpServletRequest request
 ) {
     try {
@@ -1193,6 +1193,10 @@ public String viewOrderDetailLegacy(@RequestParam("id") Long id, Model model, Ht
         return orderItems;
     }
 
+
+
+
+    
     // ==================== INNER CLASSES ====================
 
     public static class CartItem {

@@ -19,6 +19,8 @@ import jakarta.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Controller
 @RequestMapping("/admin/revenue")
@@ -65,6 +67,17 @@ public class RevenueController {
         if (to == null && "range".equals(summaryType)) {
             to = now;
         }
+
+        // Tạo danh sách năm từ 2000 đến năm hiện tại (hoặc lùi về 20 năm)
+        int currentYear = now.getYear();
+        List<Integer> availableYears = IntStream.rangeClosed(currentYear - 20, currentYear)
+            .boxed().sorted((a, b) -> b.compareTo(a)).collect(Collectors.toList());
+        model.addAttribute("availableYears", availableYears);
+
+        // Tạo danh sách tháng (1-12)
+        List<Integer> availableMonths = IntStream.rangeClosed(1, 12)
+            .boxed().collect(Collectors.toList());
+        model.addAttribute("availableMonths", availableMonths);
 
         // Xử lý logic theo summaryType
         switch (summaryType) {

@@ -94,93 +94,75 @@
             </div>
 
             <!-- Filter Form -->
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="bi bi-funnel"></i> Bộ lọc doanh thu</h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="get" class="row g-3 align-items-end">
-                                <div class="col-md-2">
-                                    <label class="form-label fw-bold">Loại thống kê:</label>
-                                    <select class="form-select" name="summaryType" id="summaryType" onchange="toggleInputs()">
-                                        <option value="all" th:selected="${summaryType == 'all'}">Tất cả thời gian</option>
-                                        <option value="day" th:selected="${summaryType == 'day'}">Theo ngày</option>
-                                        <option value="month" th:selected="${summaryType == 'month'}">Theo tháng</option>
-                                        <option value="year" th:selected="${summaryType == 'year'}">Theo năm</option>
-                                        <option value="range" th:selected="${summaryType == 'range'}">Khoảng thời gian</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Chọn ngày cụ thể -->
-                                <div class="col-md-2" id="dayDiv" style="display: none;">
-                                    <label class="form-label fw-bold">Chọn ngày:</label>
-                                    <input type="date" class="form-control" name="selectedDate" id="selectedDate" th:value="${selectedDate}">
-                                </div>
-                                
-                                <!-- Chọn tháng/năm -->
-                                <div class="col-md-2" id="monthDiv" style="display: none;">
-                                    <label class="form-label fw-bold">Tháng:</label>
-                                    <select class="form-select" name="selectedMonth" id="selectedMonth">
-                                        <option value="1" th:selected="${selectedMonth == 1}">Tháng 1</option>
-                                        <option value="2" th:selected="${selectedMonth == 2}">Tháng 2</option>
-                                        <option value="3" th:selected="${selectedMonth == 3}">Tháng 3</option>
-                                        <option value="4" th:selected="${selectedMonth == 4}">Tháng 4</option>
-                                        <option value="5" th:selected="${selectedMonth == 5}">Tháng 5</option>
-                                        <option value="6" th:selected="${selectedMonth == 6}">Tháng 6</option>
-                                        <option value="7" th:selected="${selectedMonth == 7}">Tháng 7</option>
-                                        <option value="8" th:selected="${selectedMonth == 8}">Tháng 8</option>
-                                        <option value="9" th:selected="${selectedMonth == 9}">Tháng 9</option>
-                                        <option value="10" th:selected="${selectedMonth == 10}">Tháng 10</option>
-                                        <option value="11" th:selected="${selectedMonth == 11}">Tháng 11</option>
-                                        <option value="12" th:selected="${selectedMonth == 12}">Tháng 12</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="col-md-2" id="monthYearDiv" style="display: none;">
-                                    <label class="form-label fw-bold">Năm:</label>
-                                    <select class="form-select" name="selectedMonthYear" id="selectedMonthYear">
-                                        <option value="2023" th:selected="${selectedMonthYear == 2023}">2023</option>
-                                        <option value="2024" th:selected="${selectedMonthYear == 2024}">2024</option>
-                                        <option value="2025" th:selected="${selectedMonthYear == 2025}">2025</option>
-                                        <option value="2026" th:selected="${selectedMonthYear == 2026}">2026</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Chọn năm -->
-                                <div class="col-md-2" id="yearDiv" style="display: none;">
-                                    <label class="form-label fw-bold">Chọn năm:</label>
-                                    <select class="form-select" name="selectedYear" id="selectedYear">
-                                        <option value="2023" th:selected="${selectedYear == 2023}">2023</option>
-                                        <option value="2024" th:selected="${selectedYear == 2024}">2024</option>
-                                        <option value="2025" th:selected="${selectedYear == 2025}">2025</option>
-                                        <option value="2026" th:selected="${selectedYear == 2026}">2026</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Chọn khoảng thời gian -->
-                                <div class="col-md-2" id="fromDateDiv" style="display: none;">
-                                    <label class="form-label fw-bold">Từ ngày:</label>
-                                    <input type="date" class="form-control" name="from" id="fromDate" th:value="${from}">
-                                </div>
-                                <div class="col-md-2" id="toDateDiv" style="display: none;">
-                                    <label class="form-label fw-bold">Đến ngày:</label>
-                                    <input type="date" class="form-control" name="to" id="toDate" th:value="${to}">
-                                </div>
-                                
-                                <div class="col-md-2">
-                                    <label class="form-label d-none d-md-block">&nbsp;</label>
-                                    <button type="submit" class="btn btn-primary w-100">
-                                        <i class="bi bi-search"></i> Xem doanh thu
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-funnel"></i> Bộ lọc doanh thu</h5>
             </div>
-
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Loại thống kê:</label>
+                        <select class="form-select" name="summaryType" id="summaryType" onchange="toggleInputs()">
+                            <option value="all" th:selected="${summaryType == 'all'}">Tất cả thời gian</option>
+                            <option value="day" th:selected="${summaryType == 'day'}">Theo ngày</option>
+                            <option value="month" th:selected="${summaryType == 'month'}">Theo tháng</option>
+                            <option value="year" th:selected="${summaryType == 'year'}">Theo năm</option>
+                            <option value="range" th:selected="${summaryType == 'range'}">Khoảng thời gian</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Chọn ngày cụ thể -->
+                    <div class="col-md-2" id="dayDiv" style="display: none;">
+                        <label class="form-label fw-bold">Chọn ngày:</label>
+                        <input type="date" class="form-control" name="selectedDate" id="selectedDate" th:value="${selectedDate}">
+                    </div>
+                    
+                    <!-- Chọn tháng/năm -->
+                    <div class="col-md-2" id="monthDiv" style="display: none;">
+                        <label class="form-label fw-bold">Tháng:</label>
+                        <select class="form-select" name="selectedMonth" id="selectedMonth">
+                            <option th:each="m : ${availableMonths}" th:value="${m}" th:text="'Tháng ' + ${m}" th:selected="${selectedMonth == m}"></option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2" id="monthYearDiv" style="display: none;">
+                        <label class="form-label fw-bold">Năm:</label>
+                        <select class="form-select" name="selectedMonthYear" id="selectedMonthYear">
+                            <option th:each="y : ${availableYears}" th:value="${y}" th:text="${y}" th:selected="${selectedMonthYear == y}"></option>
+                        </select>
+                    </div>
+                    
+                    <!-- Chọn năm -->
+                    <div class="col-md-2" id="yearDiv" style="display: none;">
+                        <label class="form-label fw-bold">Chọn năm:</label>
+                        <select class="form-select" name="selectedYear" id="selectedYear">
+                            <option th:each="y : ${availableYears}" th:value="${y}" th:text="${y}" th:selected="${selectedYear == y}"></option>
+                        </select>
+                    </div>
+                    
+                    <!-- Chọn khoảng thời gian -->
+                    <div class="col-md-2" id="fromDateDiv" style="display: none;">
+                        <label class="form-label fw-bold">Từ ngày:</label>
+                        <input type="date" class="form-control" name="from" id="fromDate" th:value="${from}">
+                    </div>
+                    <div class="col-md-2" id="toDateDiv" style="display: none;">
+                        <label class="form-label fw-bold">Đến ngày:</label>
+                        <input type="date" class="form-control" name="to" id="toDate" th:value="${to}">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label d-none d-md-block">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Xem doanh thu
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
             <!-- Revenue Summary -->
             <div class="row mb-4">
                 <div class="col-md-12">

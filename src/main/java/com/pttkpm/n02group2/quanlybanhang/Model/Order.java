@@ -59,9 +59,10 @@ public class Order {
 
     // Enum cho trạng thái đơn hàng
     public enum OrderStatus {
-        PENDING,    // Đang chờ xử lý
-        COMPLETED,  // Đã hoàn thành
-        CANCELLED   // Đã hủy
+    PENDING,    // Đang chờ xử lý
+    COMPLETED,  // Đã hoàn thành
+    CANCELLED,  // Đã hủy
+    RETURNED    // Đã trả hàng
     }
 
     // Constructors

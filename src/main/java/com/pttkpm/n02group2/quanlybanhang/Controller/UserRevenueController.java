@@ -16,17 +16,19 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Controller
-@RequestMapping("/user/pos/revenue")
+@RequestMapping("/user/pos")
 public class UserRevenueController {
     
     @Autowired
     private OrderService orderService;
 
-    @GetMapping("")
+    @GetMapping("/revenue")
     public String revenuePage(
-            @RequestParam(value = "summaryType", required = false, defaultValue = "day") String summaryType,
+            @RequestParam(value = "summaryType", required = false, defaultValue = "month") String summaryType,
             @RequestParam(value = "selectedDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate selectedDate,
             @RequestParam(value = "selectedMonth", required = false) Integer selectedMonth,
             @RequestParam(value = "selectedMonthYear", required = false) Integer selectedMonthYear,
@@ -39,15 +41,15 @@ public class UserRevenueController {
 
         LocalDate now = LocalDate.now();
 
-        // Mặc định hiển thị doanh số và đơn hàng của ngày thực tế
-        if (selectedDate == null && "day".equals(summaryType)) {
-            selectedDate = now;
-        }
+        // Mặc định hiển thị doanh số và đơn hàng của tháng thực tế
         if (selectedMonth == null && "month".equals(summaryType)) {
             selectedMonth = now.getMonthValue();
         }
         if (selectedMonthYear == null && "month".equals(summaryType)) {
             selectedMonthYear = now.getYear();
+        }
+        if (selectedDate == null && "day".equals(summaryType)) {
+            selectedDate = now;
         }
         if (selectedYear == null && "year".equals(summaryType)) {
             selectedYear = now.getYear();
@@ -58,6 +60,17 @@ public class UserRevenueController {
         if (to == null && "range".equals(summaryType)) {
             to = now;
         }
+
+        // Tạo danh sách năm từ 2000 đến năm hiện tại (hoặc lùi về 20 năm)
+        int currentYear = now.getYear();
+        List<Integer> availableYears = IntStream.rangeClosed(currentYear - 20, currentYear)
+            .boxed().sorted((a, b) -> b.compareTo(a)).collect(Collectors.toList());
+        model.addAttribute("availableYears", availableYears);
+
+        // Tạo danh sách tháng (1-12)
+        List<Integer> availableMonths = IntStream.rangeClosed(1, 12)
+            .boxed().collect(Collectors.toList());
+        model.addAttribute("availableMonths", availableMonths);
 
         // Xử lý logic theo summaryType
         switch (summaryType) {
@@ -130,8 +143,8 @@ public class UserRevenueController {
         return "user/pos/revenue";
     }
 
-    // Trang xem chi tiết hóa đơn doanh thu
-    @GetMapping("/view/{id}")
+    // Trang xem chi tiết hóa đơn
+    @GetMapping("/bill/{id}")
     public String viewOrder(@PathVariable Long id, Model model) {
         Order order = orderService.findById(id);
         if (order == null) {
@@ -168,6 +181,6 @@ public class UserRevenueController {
         model.addAttribute("hasDiscount", hasDiscount);
         model.addAttribute("paymentMethodVN", paymentMethodVN);
 
-        return "user/pos/revenue/view";
+        return "user/pos/bill";
     }
 }

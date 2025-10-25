@@ -96,9 +96,14 @@
                     <td th:text="${order.customer != null && order.customer.name != null ? order.customer.name : 'Khách lẻ'}"></td>
                     <td th:text="${order.finalAmount != null ? #numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></td>
                     <td>
-                        <span th:text="${order.status != null ? order.status : '---'}"
-                              th:classappend="${order.status == 'COMPLETED'} ? 'text-success' : 'text-warning'"></span>
-                    </td>
+    <span th:switch="${order.status}">
+        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).COMPLETED}" class="badge bg-success">Hoàn thành</span>
+        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).PENDING}" class="badge bg-warning text-dark">Đang xử lý</span>
+        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).CANCELLED}" class="badge bg-danger">Đã hủy</span>
+        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).RETURNED}" class="badge bg-info text-dark">Đã trả hàng</span>
+        <span th:case="*">Khác</span>
+    </span>
+</td>
                     <td>
                         <a th:href="@{'/user/pos/historyoder?id=' + ${order.id}}" class="btn btn-sm btn-info">
                             <i class="fas fa-file-invoice"></i> Xem

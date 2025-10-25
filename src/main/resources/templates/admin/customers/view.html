@@ -125,12 +125,14 @@
                       th:text="${#numbers.formatDecimal(order.finalAmount ?: order.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">199,000 VNĐ</span>
             </td>
             <td>
-                <span th:if="${order.status == 'COMPLETED'}" class="badge bg-success">Hoàn thành</span>
-                <span th:if="${order.status == 'PENDING'}" class="badge bg-warning">Đang xử lý</span>
-                <span th:if="${order.status == 'CANCELLED'}" class="badge bg-danger">Hủy</span>
-                <span th:unless="${order.status == 'COMPLETED' or order.status == 'PENDING' or order.status == 'CANCELLED'}" 
-                      class="badge bg-secondary" th:text="${order.status}">Khác</span>
-            </td>
+    <span th:switch="${order.status}">
+        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).COMPLETED}" class="badge bg-success">Hoàn thành</span>
+        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).PENDING}" class="badge bg-warning text-dark">Đang xử lý</span>
+        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).CANCELLED}" class="badge bg-danger">Đã hủy</span>
+        <span th:case="${T(com.pttkpm.n02group2.quanlybanhang.Model.Order.OrderStatus).RETURNED}" class="badge bg-info text-dark">Đã trả hàng</span>
+        <span th:case="*">Khác</span>
+    </span>
+</td>
             <td>
                 <a th:href="@{/admin/orders/{id}(id=${order.id})}" class="btn btn-info btn-sm">
                     <i class="fas fa-eye"></i> Xem chi tiết

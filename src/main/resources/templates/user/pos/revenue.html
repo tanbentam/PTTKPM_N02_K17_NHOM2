@@ -122,76 +122,55 @@
         </div>
 
         <!-- Search Form -->
-        <div class="search-form">
-            <form method="get" th:action="@{/user/pos/revenue}">
-                <div class="row g-3 align-items-end">
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-funnel"></i> Bộ lọc doanh thu</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" th:action="@{/user/pos/revenue}" class="row g-3 align-items-end">
                     <div class="col-md-2">
                         <label class="form-label fw-bold">Loại thống kê:</label>
                         <select class="form-select" name="summaryType" id="summaryType" onchange="toggleInputs()">
                             <option value="all" th:selected="${summaryType == 'all'}">Tất cả thời gian</option>
                             <option value="day" th:selected="${summaryType == 'day'}">Theo ngày</option>
-                            <option value="week" th:selected="${summaryType == 'week'}">Theo tuần</option>
                             <option value="month" th:selected="${summaryType == 'month'}">Theo tháng</option>
                             <option value="year" th:selected="${summaryType == 'year'}">Theo năm</option>
                             <option value="range" th:selected="${summaryType == 'range'}">Khoảng thời gian</option>
                         </select>
                     </div>
-
-                    <!-- Theo ngày -->
+                    
+                    <!-- Chọn ngày cụ thể -->
                     <div class="col-md-2" id="dayDiv" style="display: none;">
                         <label class="form-label fw-bold">Chọn ngày:</label>
                         <input type="date" class="form-control" name="selectedDate" id="selectedDate" th:value="${selectedDate}">
                     </div>
-
-                    <!-- Theo tuần -->
-                    <div class="col-md-2" id="weekMonthDiv" style="display: none;">
-                        <label class="form-label fw-bold">Tháng:</label>
-                        <select class="form-select" name="selectedWeekMonth" id="selectedWeekMonth">
-                            <option th:each="m : ${#numbers.sequence(1,12)}"
-                                    th:value="${m}" th:text="'Tháng ' + ${m}"
-                                    th:selected="${selectedWeekMonth == m}"></option>
-                        </select>
-                    </div>
-                    <div class="col-md-2" id="weekYearDiv" style="display: none;">
-                        <label class="form-label fw-bold">Năm:</label>
-                        <select class="form-select" name="selectedWeekYear" id="selectedWeekYear">
-                            <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${selectedWeekYear == y}"></option>
-                        </select>
-                    </div>
-                    <div class="col-md-2" id="weekNumberDiv" style="display: none;">
-                        <label class="form-label fw-bold">Tuần:</label>
-                        <select class="form-select" name="selectedWeekNumber" id="selectedWeekNumber">
-                            <option th:each="w : ${#numbers.sequence(1,5)}"
-                                    th:value="${w}" th:text="'Tuần ' + ${w}"
-                                    th:selected="${selectedWeekNumber == w}"></option>
-                        </select>
-                    </div>
-
-                    <!-- Theo tháng -->
+                    
+                    <!-- Chọn tháng/năm -->
                     <div class="col-md-2" id="monthDiv" style="display: none;">
                         <label class="form-label fw-bold">Tháng:</label>
                         <select class="form-select" name="selectedMonth" id="selectedMonth">
-                            <option th:each="m : ${#numbers.sequence(1,12)}"
-                                    th:value="${m}" th:text="'Tháng ' + ${m}"
-                                    th:selected="${selectedMonth == m}"></option>
+                            <option th:each="m : ${availableMonths}" th:value="${m}" th:text="'Tháng ' + ${m}" th:selected="${selectedMonth == m}"></option>
                         </select>
                     </div>
+                    
                     <div class="col-md-2" id="monthYearDiv" style="display: none;">
                         <label class="form-label fw-bold">Năm:</label>
                         <select class="form-select" name="selectedMonthYear" id="selectedMonthYear">
-                            <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${selectedMonthYear == y}"></option>
+                            <option th:each="y : ${availableYears}" th:value="${y}" th:text="${y}" th:selected="${selectedMonthYear == y}"></option>
                         </select>
                     </div>
-
-                    <!-- Theo năm -->
+                    
+                    <!-- Chọn năm -->
                     <div class="col-md-2" id="yearDiv" style="display: none;">
                         <label class="form-label fw-bold">Chọn năm:</label>
                         <select class="form-select" name="selectedYear" id="selectedYear">
-                            <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${selectedYear == y}"></option>
+                            <option th:each="y : ${availableYears}" th:value="${y}" th:text="${y}" th:selected="${selectedYear == y}"></option>
                         </select>
                     </div>
-
-                    <!-- Theo khoảng thời gian -->
+                    
+                    <!-- Chọn khoảng thời gian -->
                     <div class="col-md-2" id="fromDateDiv" style="display: none;">
                         <label class="form-label fw-bold">Từ ngày:</label>
                         <input type="date" class="form-control" name="from" id="fromDate" th:value="${from}">
@@ -200,17 +179,18 @@
                         <label class="form-label fw-bold">Đến ngày:</label>
                         <input type="date" class="form-control" name="to" id="toDate" th:value="${to}">
                     </div>
-
+                    
                     <div class="col-md-2">
                         <label class="form-label d-none d-md-block">&nbsp;</label>
-                        <button type="submit" class="btn btn-search w-100">
-                            <i class="fas fa-search me-1"></i>Tìm kiếm
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Xem doanh thu
                         </button>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-
+    </div>
+</div>
         <!-- Data Table -->
         <div class="table-container">
             <div class="table-responsive">
@@ -235,14 +215,19 @@
                             <td th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
                             <td class="fw-bold text-success" th:text="${#numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></td>
                             <td>
-                                <span class="badge bg-info" th:text="${order.paymentMethod}"></span>
-                            </td>
+    <span th:switch="${#strings.toUpperCase(order.paymentMethod)}">
+        <span th:case="'CASH'">Tiền mặt</span>
+        <span th:case="'TRANSFER'">Chuyển khoản</span>
+        <span th:case="'CARD'">Thẻ</span>
+        <span th:case="*">Chưa xác định</span>
+    </span>
+</td>
                             <td th:text="${order.createdBy}"></td>
                             <td class="text-center">
-                                <a th:href="@{'/user/pos/revenue/view/' + ${order.id}}" class="btn btn-view btn-sm">
-                                    <i class="fas fa-eye me-1"></i>Xem
-                                </a>
-                            </td>
+    <a th:href="@{'/user/pos/bill/' + ${order.id}}" class="btn btn-view btn-sm">
+        <i class="fas fa-eye me-1"></i>Xem
+    </a>
+</td>
                         </tr>
                         <tr th:if="${orders == null or #lists.isEmpty(orders)}">
                             <td colspan="7" class="text-center py-4">
@@ -283,38 +268,65 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleInputs() {
-            var summaryType = document.getElementById('summaryType').value;
-            // Ẩn tất cả các input
-            document.getElementById('dayDiv').style.display = 'none';
-            document.getElementById('weekMonthDiv').style.display = 'none';
-            document.getElementById('weekYearDiv').style.display = 'none';
-            document.getElementById('weekNumberDiv').style.display = 'none';
-            document.getElementById('monthDiv').style.display = 'none';
-            document.getElementById('monthYearDiv').style.display = 'none';
-            document.getElementById('yearDiv').style.display = 'none';
-            document.getElementById('fromDateDiv').style.display = 'none';
-            document.getElementById('toDateDiv').style.display = 'none';
+function toggleInputs() {
+    var summaryType = document.getElementById('summaryType').value;
+    
+    // Ẩn tất cả các input
+    document.getElementById('dayDiv').style.display = 'none';
+    document.getElementById('monthDiv').style.display = 'none';
+    document.getElementById('monthYearDiv').style.display = 'none';
+    document.getElementById('yearDiv').style.display = 'none';
+    document.getElementById('fromDateDiv').style.display = 'none';
+    document.getElementById('toDateDiv').style.display = 'none';
 
-            if (summaryType === 'day') {
-                document.getElementById('dayDiv').style.display = 'block';
-            } else if (summaryType === 'week') {
-                document.getElementById('weekMonthDiv').style.display = 'block';
-                document.getElementById('weekYearDiv').style.display = 'block';
-                document.getElementById('weekNumberDiv').style.display = 'block';
-            } else if (summaryType === 'month') {
-                document.getElementById('monthDiv').style.display = 'block';
-                document.getElementById('monthYearDiv').style.display = 'block';
-            } else if (summaryType === 'year') {
-                document.getElementById('yearDiv').style.display = 'block';
-            } else if (summaryType === 'range') {
-                document.getElementById('fromDateDiv').style.display = 'block';
-                document.getElementById('toDateDiv').style.display = 'block';
-            }
+    // Lấy thời gian hiện tại
+    var now = new Date();
+    var currentYear = now.getFullYear();
+    var currentMonth = now.getMonth() + 1; // JavaScript month từ 0-11
+    var currentDate = now.toISOString().split('T')[0]; // Format YYYY-MM-DD
+
+    if (summaryType === 'day') {
+        document.getElementById('dayDiv').style.display = 'block';
+        if (!document.getElementById('selectedDate').value) {
+            document.getElementById('selectedDate').value = currentDate;
         }
-        document.addEventListener('DOMContentLoaded', function() {
-            toggleInputs();
-        });
-    </script>
+    } else if (summaryType === 'month') {
+        document.getElementById('monthDiv').style.display = 'block';
+        document.getElementById('monthYearDiv').style.display = 'block';
+        
+        // Đặt giá trị mặc định là tháng hiện tại
+        var monthSelect = document.getElementById('selectedMonth');
+        var yearSelect = document.getElementById('selectedMonthYear');
+        
+        if (!monthSelect.value) {
+            monthSelect.value = currentMonth;
+        }
+        if (!yearSelect.value) {
+            yearSelect.value = currentYear;
+        }
+    } else if (summaryType === 'year') {
+        document.getElementById('yearDiv').style.display = 'block';
+        
+        // Đặt giá trị mặc định là năm hiện tại
+        var yearSelect = document.getElementById('selectedYear');
+        if (!yearSelect.value) {
+            yearSelect.value = currentYear;
+        }
+    } else if (summaryType === 'range') {
+        document.getElementById('fromDateDiv').style.display = 'block';
+        document.getElementById('toDateDiv').style.display = 'block';
+        if (!document.getElementById('fromDate').value) {
+            document.getElementById('fromDate').value = currentDate;
+        }
+        if (!document.getElementById('toDate').value) {
+            document.getElementById('toDate').value = currentDate;
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    toggleInputs();
+});
+</script>
 </body>
 </html>

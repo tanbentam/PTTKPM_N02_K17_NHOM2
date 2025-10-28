@@ -9,7 +9,6 @@ import java.util.List;
 @Table(name = "orders")
 public class Order {
 
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -53,7 +52,6 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderItem> items;
 
-    // SỬA LẠI: Bỏ @ManyToOne và @JoinColumn sai, thay bằng @Column
     @Column(name = "payment_method")
     private String paymentMethod;
 
@@ -63,7 +61,29 @@ public class Order {
         COMPLETED,       // Đã hoàn thành
         CANCELLED,       // Đã hủy
         RETURNED,        // Đã trả hàng
-        RETURN_REQUESTED // Yêu cầu đổi trả (chờ admin duyệt) - THÊM MỚI
+        RETURN_REQUESTED // Yêu cầu đổi trả (chờ admin duyệt)
+    }
+
+    // Danh sách sản phẩm đổi/trả (ví dụ: các item bị trả lại)
+    @Transient
+    private List<OrderItem> returnItems;
+
+    // Danh sách sản phẩm nhận sau đổi (ví dụ: các item được nhận lại)
+    @Transient
+    private List<OrderItem> receiveItems;
+
+    // Nếu có bảng returnRequestItems riêng thì giữ lại, nếu không có thể bỏ
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReturnRequestItem> returnRequestItems;
+
+    private Double originalAmount;
+
+    public Double getOriginalAmount() {
+        return originalAmount;
+    }
+
+    public void setOriginalAmount(Double originalAmount) {
+        this.originalAmount = originalAmount;
     }
 
     // Constructors
@@ -111,6 +131,31 @@ public class Order {
 
     public String getPaymentMethod() { return paymentMethod; }
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    // Getter & Setter cho returnItems và receiveItems (dùng @Transient)
+    public List<OrderItem> getReturnItems() {
+        return returnItems;
+    }
+
+    public void setReturnItems(List<OrderItem> returnItems) {
+        this.returnItems = returnItems;
+    }
+
+    public List<OrderItem> getReceiveItems() {
+        return receiveItems;
+    }
+
+    public void setReceiveItems(List<OrderItem> receiveItems) {
+        this.receiveItems = receiveItems;
+    }
+
+    public List<ReturnRequestItem> getReturnRequestItems() {
+        return returnRequestItems;
+    }
+
+    public void setReturnRequestItems(List<ReturnRequestItem> returnRequestItems) {
+        this.returnRequestItems = returnRequestItems;
+    }
 
     @PrePersist
     protected void onCreate() {

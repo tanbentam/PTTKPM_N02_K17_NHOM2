@@ -1,7 +1,9 @@
 package com.pttkpm.n02group2.quanlybanhang.Controller;
 
 import com.pttkpm.n02group2.quanlybanhang.Model.Customer;
+import com.pttkpm.n02group2.quanlybanhang.Model.Order;
 import com.pttkpm.n02group2.quanlybanhang.Service.CustomerService;
+import com.pttkpm.n02group2.quanlybanhang.Service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -23,6 +25,9 @@ public class CustomerController {
     @Autowired
     private CustomerService customerService;
 
+    @Autowired
+    private OrderService orderService; // Thêm để lấy đơn hàng của khách
+
     // ==================== LIST CUSTOMERS ====================
     @GetMapping
     public String listCustomers(@RequestParam(defaultValue = "0") int page,
@@ -36,8 +41,24 @@ public class CustomerController {
 
             if (search != null && !search.trim().isEmpty()) {
                 customerPage = customerService.quickSearch(search.trim(), PageRequest.of(page, size));
+                // Tính lại tổng tiền đã mua cho từng khách trong kết quả tìm kiếm
+                for (Customer customer : customerPage.getContent()) {
+                    List<Order> orders = orderService.findByCustomer(customer);
+                    double totalSpent = orders.stream()
+                        .mapToDouble(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0)
+                        .sum();
+                    customer.setTotalSpent(totalSpent);
+                }
             } else {
                 List<Customer> allCustomers = customerService.getAllCustomers();
+                // Tính lại tổng tiền đã mua cho từng khách hàng
+                for (Customer customer : allCustomers) {
+                    List<Order> orders = orderService.findByCustomer(customer);
+                    double totalSpent = orders.stream()
+                        .mapToDouble(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0)
+                        .sum();
+                    customer.setTotalSpent(totalSpent);
+                }
                 int total = allCustomers.size();
                 int start = Math.min(page * size, total);
                 int end = Math.min(start + size, total);

@@ -213,23 +213,17 @@
                                     <td th:text="${order.customer.name}"></td>
                                     <td th:text="${#dates.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
                                     <td>
-                                        <span class="badge"
-                                              th:classappend="|
-                                                ${#strings.equalsIgnoreCase(order.status, 'COMPLETED') ? 'bg-success' :
-                                                  (#strings.equalsIgnoreCase(order.status, 'DELIVERED') ? 'bg-success' :
-                                                  (#strings.equalsIgnoreCase(order.status, 'PAID') ? 'bg-success' :
-                                                  (#strings.equalsIgnoreCase(order.status, 'PENDING') ? 'bg-warning text-dark' : 'bg-danger')))}
-                                              |"
-                                              th:text="|
-                                                ${#strings.equalsIgnoreCase(order.status, 'COMPLETED') ? 'Hoàn thành' :
-                                                  (#strings.equalsIgnoreCase(order.status, 'DELIVERED') ? 'Đã thanh toán' :
-                                                  (#strings.equalsIgnoreCase(order.status, 'PAID') ? 'Đã thanh toán' :
-                                                  (#strings.equalsIgnoreCase(order.status, 'PENDING') ? 'Đang xử lý' : 'Đã hủy')))}
-                                              |">
+                                        <span th:switch="${order.status != null ? order.status.name() : ''}">
+                                            <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+                                            <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
+                                            <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                                            <span th:case="'RETURNED'" class="badge bg-info text-dark">Đã trả hàng</span>
+                                            <span th:case="*">Khác</span>
                                         </span>
                                     </td>
-                                    <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(order.finalAmount != null ?
-                                            order.finalAmount : order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ'}">
+                                    <td class="text-end fw-bold">
+                                        <span th:text="${order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></span>
+                                        <small th:if="${order.status != null and order.status.name() == 'RETURNED'}" class="text-muted"> (Sau đổi trả)</small>
                                     </td>
                                     <td class="text-center">
     <a th:href="@{/admin/revenue/view/{id}(id=${order.id})}"

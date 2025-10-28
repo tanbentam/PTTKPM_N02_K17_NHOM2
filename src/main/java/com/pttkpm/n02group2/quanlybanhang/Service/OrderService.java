@@ -125,15 +125,26 @@ public List<Order> findByStatus(Order.OrderStatus status) {
         }
     }
 
+public List<Order> findByCustomer(Customer customer) {
+    return orderRepository.findByCustomer(customer);
+}
+
     // ==================== HELPER METHODS ====================
     
     public long countAll() {
         return orderRepository.count();
     }
 public double getTotalRevenue() {
-        Double revenue = orderRepository.sumTotalRevenue();
-        return revenue != null ? revenue : 0.0;
-    }
+    // Lấy tất cả đơn hàng
+    List<Order> allOrders = orderRepository.findAll();
+    
+    // Lọc và tính doanh thu từ đơn hàng COMPLETED và RETURNED
+    return allOrders.stream()
+        .filter(order -> order.getStatus() == Order.OrderStatus.COMPLETED || 
+                        order.getStatus() == Order.OrderStatus.RETURNED)
+        .mapToDouble(order -> order.getTotalAmount() != null ? order.getTotalAmount() : 0.0)
+        .sum();
+}
     // Nếu chưa có method này, thêm luôn
     public List<Order> findByCustomerId(Long customerId) {
         return orderRepository.findByCustomerId(customerId);

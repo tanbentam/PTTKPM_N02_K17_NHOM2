@@ -35,6 +35,12 @@
         .info-item:last-child {
             border-bottom: none;
         }
+        .summary-card {
+            border-left: 4px solid #007bff;
+        }
+        .value-positive { color: #dc3545; font-weight: bold; }
+        .value-negative { color: #28a745; font-weight: bold; }
+        .value-equal { color: #6c757d; font-weight: bold; }
     </style>
 </head>
 <body class="bg-light">
@@ -106,7 +112,7 @@
 
     <!-- Thông tin sản phẩm -->
     <div class="row">
-        <!-- Sản phẩm muốn trả lại -->
+        <!-- Sản phẩm trả lại -->
         <div class="col-lg-6 mb-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-danger text-white">
@@ -118,12 +124,13 @@
                             <thead>
                                 <tr>
                                     <th><i class="fas fa-box me-1"></i>Sản phẩm</th>
-                                    <th><i class="fas fa-money-bill me-1"></i>Giá</th>
-                                    <th><i class="fas fa-sort-numeric-up me-1"></i>SL</th>
+                                    <th><i class="fas fa-money-bill me-1"></i>Giá đã mua</th>
+                                    <th><i class="fas fa-sort-numeric-up me-1"></i>SL trả</th>
+                                    <th>Tổng</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="item : ${order.items}">
+                                <tr th:each="item : ${returnItems}">
                                     <td>
                                         <strong th:text="${item.product.name}"></strong>
                                         <br><small class="text-muted">Mã: <span th:text="${item.product.id}"></span></small>
@@ -135,6 +142,18 @@
                                     <td>
                                         <span class="badge bg-light text-dark" th:text="${item.quantity}"></span>
                                     </td>
+                                    <td>
+                                        <span class="fw-bold" th:text="${#numbers.formatDecimal(item.unitPrice * item.quantity, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(returnItems)}">
+                                    <td colspan="4" class="text-center text-muted py-3">
+                                        <i class="fas fa-inbox me-2"></i>Không có sản phẩm trả lại
+                                    </td>
+                                </tr>
+                                <tr class="table-secondary" th:if="${!#lists.isEmpty(returnItems)}">
+                                    <td colspan="3" class="text-end fw-bold">Tổng trả lại</td>
+                                    <td class="fw-bold text-danger" th:text="${#numbers.formatDecimal(totalReturn, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -155,31 +174,76 @@
                             <thead>
                                 <tr>
                                     <th><i class="fas fa-box me-1"></i>Sản phẩm</th>
-                                    <th><i class="fas fa-money-bill me-1"></i>Giá</th>
-                                    <th><i class="fas fa-sort-numeric-up me-1"></i>SL</th>
+                                    <th><i class="fas fa-money-bill me-1"></i>Giá hiện tại</th>
+                                    <th><i class="fas fa-sort-numeric-up me-1"></i>SL nhận</th>
+                                    <th>Tổng</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr th:each="item : ${newItems}">
-                                    <td>
-                                        <strong th:text="${item.product.name}"></strong>
-                                        <br><small class="text-muted">Mã: <span th:text="${item.product.id}"></span></small>
-                                    </td>
-                                    <td>
-                                        <span class="text-success fw-bold" 
-                                              th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark" th:text="${item.quantity}"></span>
-                                    </td>
-                                </tr>
-                                <tr th:if="${#lists.isEmpty(newItems)}">
-                                    <td colspan="3" class="text-center text-muted py-3">
-                                        <i class="fas fa-inbox me-2"></i>Không có sản phẩm muốn nhận
-                                    </td>
-                                </tr>
-                            </tbody>
+                            
+<tbody>
+    <tr th:each="item : ${receiveItemsDisplay}">
+        <td>
+            <strong th:text="${item.productName}"></strong>
+            <br><small class="text-muted">Mã: <span th:text="${item.productId}"></span></small>
+        </td>
+        <td>
+            <span class="text-success fw-bold" 
+                  th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+        </td>
+        <td>
+            <span class="badge bg-light text-dark" th:text="${item.quantity}"></span>
+        </td>
+        <td>
+            <span class="fw-bold" th:text="${#numbers.formatDecimal(item.totalPrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+        </td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(receiveItemsDisplay)}">
+        <td colspan="4" class="text-center text-muted py-3">
+            <i class="fas fa-inbox me-2"></i>Không có sản phẩm muốn nhận
+        </td>
+    </tr>
+    <tr class="table-secondary" th:if="${!#lists.isEmpty(receiveItemsDisplay)}">
+        <td colspan="3" class="text-end fw-bold">Tổng nhận</td>
+        <td class="fw-bold text-success" th:text="${#numbers.formatDecimal(totalReceive, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></td>
+    </tr>
+</tbody>
+
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tóm tắt giá trị đổi trả -->
+    <div class="card mb-4 summary-card">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fa fa-calculator"></i> Tóm tắt giá trị đổi trả</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <div class="p-3 border rounded bg-light">
+                        <h6>Giá trị trả lại</h6>
+                        <span class="fs-5 text-danger fw-bold" th:text="${#numbers.formatDecimal(totalReturn, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 border rounded bg-light">
+                        <h6>Giá trị nhận</h6>
+                        <span class="fs-5 text-success fw-bold" th:text="${#numbers.formatDecimal(totalReceive, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 border rounded bg-light">
+                        <h6>Chênh lệch</h6>
+                        <span class="fs-5 fw-bold"
+                              th:classappend="${difference > 0} ? 'value-positive' : (${difference < 0} ? 'value-negative' : 'value-equal')"
+                              th:text="${#numbers.formatDecimal(difference, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                        <br>
+                        <small th:if="${difference > 0}" class="text-danger">Khách cần bù thêm</small>
+                        <small th:if="${difference < 0}" class="text-success">Khách được hoàn lại</small>
+                        <small th:if="${difference == 0}" class="text-muted">Không có chênh lệch</small>
                     </div>
                 </div>
             </div>

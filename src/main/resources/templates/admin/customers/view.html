@@ -99,7 +99,6 @@
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <!-- ...existing code... -->
 
 <table class="table table-bordered mb-0">
     <thead class="table-light">
@@ -119,25 +118,28 @@
             </td>
             <!-- Dùng #temporals.format cho LocalDateTime -->
             <td th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2025 10:30</td>
-            <td>
-                <!-- THAY ĐỔI: Hiển thị số tiền cuối cùng đã thanh toán (finalAmount), không phải totalAmount -->
-                <span class="text-success fw-bold" 
-                      th:text="${#numbers.formatDecimal(order.finalAmount ?: order.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">199,000 VNĐ</span>
-            </td>
-            <td>
-        <span th:switch="${order.status.name()}">
-        <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
-        <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
-        <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
-        <span th:case="'RETURNED'" class="badge bg-info text-dark">Đã trả hàng</span>
-        <span th:case="*">Khác</span>
-    </span>
-
+            
+            <td class="text-end fw-bold">
+    <span th:text="${order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></span>
+    <small th:if="${order.status != null and order.status.name() == 'RETURNED'}" class="text-muted"> (Sau đổi trả)</small>
 </td>
+            <td>
+                <span th:switch="${order.status != null ? order.status.name() : ''}">
+                    <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+                    <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
+                    <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                    <span th:case="'RETURNED'" class="badge bg-info text-dark">Đã trả hàng</span>
+                    <span th:case="*">Khác</span>
+                </span>
+            </td>
             <td>
                 <a th:href="@{/admin/orders/{id}(id=${order.id})}" class="btn btn-info btn-sm">
                     <i class="fas fa-eye"></i> Xem chi tiết
                 </a>
+                <button type="button" class="btn btn-danger btn-sm ms-1 btn-delete-order"
+                        th:attr="data-order-id=${order.id}">
+                    <i class="fas fa-trash-alt"></i> Xóa
+                </button>
             </td>
         </tr>
         <tr th:if="${#lists.isEmpty(orders)}">
@@ -200,7 +202,27 @@
         </div>
     </nav>
 
-<!-- ...existing code... -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-delete-order').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (confirm('Bạn có chắc muốn xóa hóa đơn này?')) {
+                const orderId = btn.getAttribute('data-order-id');
+                fetch('/api/orders/' + orderId, {
+                    method: 'DELETE'
+                }).then(res => {
+                    if (res.status === 204) {
+                        // Xóa dòng khỏi bảng
+                        btn.closest('tr').remove();
+                    } else {
+                        alert('Xóa hóa đơn thất bại!');
+                    }
+                }).catch(() => alert('Lỗi kết nối máy chủ!'));
+            }
+        });
+    });
+});
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

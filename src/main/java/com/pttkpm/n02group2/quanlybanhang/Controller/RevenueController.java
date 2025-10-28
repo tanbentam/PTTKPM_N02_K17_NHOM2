@@ -116,17 +116,17 @@ public class RevenueController {
             orderPage = orderService.findAllOrders(pageable);
         }
 
-        // Tổng doanh thu của tất cả hóa đơn (không chỉ trang hiện tại)
-        double totalRevenue;
+        // Tổng doanh thu của tất cả hóa đơn (không chỉ trang hiện tại) - ƯU TIÊN totalAmount (đã cập nhật sau đổi trả)
+          double totalRevenue;
         if (from != null && to != null) {
             totalRevenue = orderService.findOrdersByDateRange(from, to)
                     .stream()
-                    .mapToDouble(order -> order.getFinalAmount() != null ? order.getFinalAmount() : order.getTotalAmount())
+                    .mapToDouble(order -> order.getTotalAmount() != null ? order.getTotalAmount() : 0)
                     .sum();
         } else {
             totalRevenue = orderService.findAllOrders()
                     .stream()
-                    .mapToDouble(order -> order.getFinalAmount() != null ? order.getFinalAmount() : order.getTotalAmount())
+                    .mapToDouble(order -> order.getTotalAmount() != null ? order.getTotalAmount() : 0)
                     .sum();
         }
 
@@ -148,6 +148,8 @@ public class RevenueController {
     }
 
     // Trang xem chi tiết hóa đơn doanh thu
+    // ...existing code...
+    // Trang xem chi tiết hóa đơn doanh thu
     @GetMapping("/view/{id}")
     public String viewOrder(@PathVariable Long id, Model model, HttpSession session) {
         User user = (User) session.getAttribute("user");
@@ -161,6 +163,17 @@ public class RevenueController {
         }
         Customer customer = order.getCustomer();
         List<OrderItem> orderItems = order.getItems();
+
+        // Lấy danh sách sản phẩm đổi/trả và sản phẩm nhận sau đổi (nếu có)
+        List<OrderItem> returnItems = order.getReturnItems() != null ? order.getReturnItems() : List.of();
+        List<OrderItem> receiveItems = order.getReceiveItems() != null ? order.getReceiveItems() : List.of();
+
+        double totalReturnAmount = (returnItems != null && !returnItems.isEmpty())
+            ? returnItems.stream().mapToDouble(i -> i.getQuantity() * i.getPrice()).sum()
+            : 0.0;
+        double totalReceiveAmount = (receiveItems != null && !receiveItems.isEmpty())
+            ? receiveItems.stream().mapToDouble(i -> i.getQuantity() * i.getPrice()).sum()
+            : 0.0;
 
         double originalTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0;
         double actualDiscount = order.getVipDiscountAmount() != null ? order.getVipDiscountAmount() : 0;
@@ -183,6 +196,10 @@ public class RevenueController {
         model.addAttribute("order", order);
         model.addAttribute("customer", customer);
         model.addAttribute("orderItems", orderItems);
+        model.addAttribute("returnItems", returnItems);
+        model.addAttribute("receiveItems", receiveItems);
+        model.addAttribute("totalReturnAmount", totalReturnAmount);
+        model.addAttribute("totalReceiveAmount", totalReceiveAmount);
         model.addAttribute("originalTotal", originalTotal);
         model.addAttribute("actualDiscount", actualDiscount);
         model.addAttribute("actualPaidAmount", actualPaidAmount);
@@ -191,4 +208,5 @@ public class RevenueController {
 
         return "admin/revenue/view";
     }
+// ...existing code...
 }

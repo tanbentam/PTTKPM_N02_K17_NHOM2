@@ -40,6 +40,7 @@ public class ReturnRequestController {
         try {
             Order order = orderService.findById(orderId);
             if (order == null) {
+                model.addAttribute("error", "Không tìm thấy đơn hàng!");
                 return "redirect:/user/pos/history";
             }
 
@@ -49,8 +50,17 @@ public class ReturnRequestController {
                 return "redirect:/user/pos/history";
             }
 
+            // Kiểm tra xem đã có yêu cầu đổi trả chưa
+            if (order.getStatus() == Order.OrderStatus.RETURN_REQUESTED) {
+                model.addAttribute("error", "Đơn hàng này đã có yêu cầu đổi trả đang chờ xử lý.");
+                return "redirect:/user/pos/history";
+            }
+
             // Lấy tất cả sản phẩm có sẵn
-            List<Product> products = productService.findAll();
+            List<Product> products = productService.findAll()
+                .stream()
+                .filter(p -> p.getQuantity() > 0) // Chỉ lấy sản phẩm còn hàng
+                .collect(Collectors.toList());
 
             // Lấy danh sách danh mục sản phẩm duy nhất
             Set<String> categories = products.stream()
@@ -69,11 +79,19 @@ public class ReturnRequestController {
                 pv.put("quantity", p.getQuantity());
                 
                 // Tính giá khuyến mại
-                Double discountPrice = promotionService.calculateDiscountedPrice(p);
-                if (discountPrice != null && !discountPrice.equals(p.getPrice())) {
-                    pv.put("discountPrice", discountPrice);
-                } else {
+                try {
+                    Double discountPrice = promotionService.calculateDiscountedPrice(p);
+                    if (discountPrice != null && !discountPrice.equals(p.getPrice())) {
+                        pv.put("discountPrice", discountPrice);
+                        pv.put("hasPromotion", true);
+                    } else {
+                        pv.put("discountPrice", null);
+                        pv.put("hasPromotion", false);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error calculating promotion for product " + p.getId() + ": " + e.getMessage());
                     pv.put("discountPrice", null);
+                    pv.put("hasPromotion", false);
                 }
                 
                 productViews.add(pv);
@@ -87,6 +105,7 @@ public class ReturnRequestController {
         } catch (Exception e) {
             System.err.println("Error loading return form: " + e.getMessage());
             e.printStackTrace();
+            model.addAttribute("error", "Có lỗi xảy ra khi tải trang đổi trả.");
             return "redirect:/user/pos/history";
         }
     }
@@ -103,6 +122,14 @@ public class ReturnRequestController {
             RedirectAttributes redirectAttributes) {
 
         try {
+            System.out.println("=== SUBMIT RETURN REQUEST DEBUG ===");
+            System.out.println("Order ID: " + orderId);
+            System.out.println("Old Product IDs: " + oldProductIds);
+            System.out.println("Old Quantities: " + oldQuantities);
+            System.out.println("New Product IDs: " + newProductIds);
+            System.out.println("New Quantities: " + newQuantities);
+            System.out.println("Reason: " + reason);
+
             // Kiểm tra đơn hàng tồn tại
             Order oldOrder = orderService.findById(orderId);
             if (oldOrder == null) {
@@ -132,111 +159,52 @@ public class ReturnRequestController {
                 return "redirect:/user/pos/return/" + orderId;
             }
 
-            // Validation sản phẩm trả lại
-            double totalOld = 0;
-            List<OrderItem> orderItems = oldOrder.getItems();
-            
-            for (int i = 0; i < oldProductIds.size(); i++) {
-                Long prodId = oldProductIds.get(i);
-                int qty = (i < oldQuantities.size() && oldQuantities.get(i) > 0) ? oldQuantities.get(i) : 1;
-                
-                // Tìm sản phẩm trong đơn hàng
-                OrderItem foundItem = orderItems.stream()
-                    .filter(item -> item.getProduct().getId().equals(prodId))
-                    .findFirst().orElse(null);
-                
-                if (foundItem == null) {
-                    redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại trong đơn hàng này.");
-                    return "redirect:/user/pos/return/" + orderId;
-                }
-                
-                // Kiểm tra số lượng đổi không vượt quá số lượng đã mua
-                if (qty > foundItem.getQuantity()) {
-                    redirectAttributes.addFlashAttribute("error", 
-                        "Số lượng đổi sản phẩm '" + foundItem.getProduct().getName() + 
-                        "' không thể vượt quá số lượng đã mua (" + foundItem.getQuantity() + ").");
-                    return "redirect:/user/pos/return/" + orderId;
-                }
-                
-                double unitPrice = foundItem.getUnitPrice() != null ? foundItem.getUnitPrice() : 0;
-                totalOld += unitPrice * qty;
+            // Validation và tính toán sản phẩm trả lại
+            double totalOld = validateAndCalculateReturnItems(oldOrder, oldProductIds, oldQuantities, redirectAttributes);
+            if (totalOld < 0) {
+                return "redirect:/user/pos/return/" + orderId; // Error đã được set trong method
             }
 
-            // Validation sản phẩm muốn nhận
-            double totalNew = 0;
-            
-            for (int i = 0; i < newProductIds.size(); i++) {
-                Long prodId = newProductIds.get(i);
-                int qty = (i < newQuantities.size() && newQuantities.get(i) > 0) ? newQuantities.get(i) : 1;
-                
-                Product p = productService.findById(prodId);
-                if (p == null) {
-                    redirectAttributes.addFlashAttribute("error", "Sản phẩm muốn nhận không tồn tại.");
-                    return "redirect:/user/pos/return/" + orderId;
-                }
-                
-                // Kiểm tra tồn kho
-                if (qty > p.getQuantity()) {
-                    redirectAttributes.addFlashAttribute("error", 
-                        "Số lượng sản phẩm '" + p.getName() + 
-                        "' vượt quá tồn kho hiện có (" + p.getQuantity() + ").");
-                    return "redirect:/user/pos/return/" + orderId;
-                }
-                
-                // Sử dụng giá có khuyến mại nếu có
-                Double discountPrice = promotionService.calculateDiscountedPrice(p);
-                double finalPrice = (discountPrice != null) ? discountPrice : p.getPrice();
-                totalNew += finalPrice * qty;
+            // Validation và tính toán sản phẩm muốn nhận
+            double totalNew = validateAndCalculateReceiveItems(newProductIds, newQuantities, redirectAttributes);
+            if (totalNew < 0) {
+                return "redirect:/user/pos/return/" + orderId; // Error đã được set trong method
             }
 
             // Kiểm tra giá trị đổi trả
             if (totalNew < totalOld) {
                 redirectAttributes.addFlashAttribute("error", 
-                    "Tổng giá trị sản phẩm nhận (" + String.format("%.0f", totalNew) + 
+                    "Tổng giá trị sản phẩm nhận (" + String.format("%,.0f", totalNew) + 
                     " VNĐ) phải lớn hơn hoặc bằng tổng giá trị sản phẩm đổi (" + 
-                    String.format("%.0f", totalOld) + " VNĐ).");
+                    String.format("%,.0f", totalOld) + " VNĐ).");
                 return "redirect:/user/pos/return/" + orderId;
             }
+
+            // Xóa các return request items cũ nếu có
+            List<ReturnRequestItem> existingItems = returnRequestItemRepository.findByOrder(oldOrder);
+            if (!existingItems.isEmpty()) {
+                returnRequestItemRepository.deleteAll(existingItems);
+                System.out.println("Deleted " + existingItems.size() + " existing return request items");
+            }
+
+            // Lưu sản phẩm trả lại (RETURN)
+            saveReturnItems(oldOrder, oldProductIds, oldQuantities);
+
+            // Lưu sản phẩm muốn nhận (RECEIVE)
+            saveReceiveItems(oldOrder, newProductIds, newQuantities);
 
             // Cập nhật trạng thái đơn hàng
             oldOrder.setStatus(Order.OrderStatus.RETURN_REQUESTED);
             orderService.save(oldOrder);
- // ...existing code...
 
- // **QUAN TRỌNG: Lưu sản phẩm muốn nhận vào database**
-  for (int i = 0; i < newProductIds.size(); i++) {
-    Long productId = newProductIds.get(i);
-    Integer quantity = newQuantities.get(i);
-    
-    Product product = productService.findById(productId);
-    if (product != null) {
-        // Tính giá cuối cùng (có khuyến mại nếu có)
-        Double discountPrice = promotionService.calculateDiscountedPrice(product);
-        int finalPrice;
-        
-        if (discountPrice != null) {
-            finalPrice = (int) Math.round(discountPrice);
-        } else {
-            finalPrice = (int) Math.round(product.getPrice()); // Cast Double sang int
-        }
-        
-        ReturnRequestItem item = new ReturnRequestItem();
-        item.setOrder(oldOrder);
-        item.setProduct(product);
-        item.setQuantity(quantity);
-        item.setUnitPrice(finalPrice);
-        
-        returnRequestItemRepository.save(item);
-    }
-}
-// ...existing code...
-
+            System.out.println("=== RETURN REQUEST COMPLETED ===");
 
             // Thông báo thành công
             redirectAttributes.addFlashAttribute("message", 
                 "Yêu cầu đổi trả đã được gửi thành công! " +
                 "Mã đơn hàng: " + oldOrder.getOrderNumber() + ". " +
-                "Admin sẽ xem xét và phản hồi trong thời gian sớm nhất.");
+                "Admin sẽ xem xét và phản hồi trong thời gian sớm nhất. " +
+                "Chênh lệch cần thanh toán: " + String.format("%,.0f", (totalNew - totalOld)) + " VNĐ.");
 
             return "redirect:/user/pos/history";
 
@@ -245,6 +213,136 @@ public class ReturnRequestController {
             e.printStackTrace();
             redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra khi xử lý yêu cầu: " + e.getMessage());
             return "redirect:/user/pos/return/" + orderId;
+        }
+    }
+
+    // Helper method: Validate và tính toán sản phẩm trả lại
+    private double validateAndCalculateReturnItems(Order order, List<Long> productIds, List<Integer> quantities, RedirectAttributes redirectAttributes) {
+        double total = 0;
+        List<OrderItem> orderItems = order.getItems();
+        
+        for (int i = 0; i < productIds.size(); i++) {
+            Long prodId = productIds.get(i);
+            int qty = (i < quantities.size() && quantities.get(i) > 0) ? quantities.get(i) : 1;
+            
+            // Tìm sản phẩm trong đơn hàng
+            OrderItem foundItem = orderItems.stream()
+                .filter(item -> item.getProduct().getId().equals(prodId))
+                .findFirst().orElse(null);
+            
+            if (foundItem == null) {
+                redirectAttributes.addFlashAttribute("error", "Sản phẩm không tồn tại trong đơn hàng này.");
+                return -1;
+            }
+            
+            // Kiểm tra số lượng đổi không vượt quá số lượng đã mua
+            if (qty > foundItem.getQuantity()) {
+                redirectAttributes.addFlashAttribute("error", 
+                    "Số lượng đổi sản phẩm '" + foundItem.getProduct().getName() + 
+                    "' không thể vượt quá số lượng đã mua (" + foundItem.getQuantity() + ").");
+                return -1;
+            }
+            
+            double unitPrice = foundItem.getUnitPrice() != null ? foundItem.getUnitPrice() : 0;
+            total += unitPrice * qty;
+        }
+        
+        return total;
+    }
+
+    // Helper method: Validate và tính toán sản phẩm muốn nhận
+    private double validateAndCalculateReceiveItems(List<Long> productIds, List<Integer> quantities, RedirectAttributes redirectAttributes) {
+        double total = 0;
+        
+        for (int i = 0; i < productIds.size(); i++) {
+            Long prodId = productIds.get(i);
+            int qty = (i < quantities.size() && quantities.get(i) > 0) ? quantities.get(i) : 1;
+            
+            Product p = productService.findById(prodId);
+            if (p == null) {
+                redirectAttributes.addFlashAttribute("error", "Sản phẩm muốn nhận không tồn tại.");
+                return -1;
+            }
+            
+            // Kiểm tra tồn kho
+            if (qty > p.getQuantity()) {
+                redirectAttributes.addFlashAttribute("error", 
+                    "Số lượng sản phẩm '" + p.getName() + 
+                    "' vượt quá tồn kho hiện có (" + p.getQuantity() + ").");
+                return -1;
+            }
+            
+            // Sử dụng giá có khuyến mại nếu có
+            try {
+                Double discountPrice = promotionService.calculateDiscountedPrice(p);
+                double finalPrice = (discountPrice != null) ? discountPrice : p.getPrice();
+                total += finalPrice * qty;
+            } catch (Exception e) {
+                System.err.println("Error calculating promotion price: " + e.getMessage());
+                total += p.getPrice() * qty;
+            }
+        }
+        
+        return total;
+    }
+
+    // Helper method: Lưu sản phẩm trả lại
+    private void saveReturnItems(Order order, List<Long> productIds, List<Integer> quantities) {
+        List<OrderItem> orderItems = order.getItems();
+        
+        for (int i = 0; i < productIds.size(); i++) {
+            Long productId = productIds.get(i);
+            Integer quantity = quantities.get(i);
+            
+            // Tìm OrderItem tương ứng để lấy giá đã mua
+            OrderItem foundItem = orderItems.stream()
+                .filter(item -> item.getProduct().getId().equals(productId))
+                .findFirst().orElse(null);
+            
+            if (foundItem != null && quantity > 0) {
+                ReturnRequestItem item = new ReturnRequestItem();
+                item.setOrder(order);
+                item.setProduct(foundItem.getProduct());
+                item.setQuantity(quantity);
+                item.setUnitPrice(foundItem.getUnitPrice() != null ? foundItem.getUnitPrice() : 0.0);
+                item.setType("RETURN"); // QUAN TRỌNG: Set type
+                
+                returnRequestItemRepository.save(item);
+                System.out.println("Saved RETURN item: " + foundItem.getProduct().getName() + 
+                    ", qty: " + quantity + ", price: " + item.getUnitPrice());
+            }
+        }
+    }
+
+    // Helper method: Lưu sản phẩm muốn nhận
+    private void saveReceiveItems(Order order, List<Long> productIds, List<Integer> quantities) {
+        for (int i = 0; i < productIds.size(); i++) {
+            Long productId = productIds.get(i);
+            Integer quantity = quantities.get(i);
+            
+            Product product = productService.findById(productId);
+            if (product != null && quantity > 0) {
+                // Tính giá cuối cùng (có khuyến mại nếu có)
+                double finalPrice;
+                try {
+                    Double discountPrice = promotionService.calculateDiscountedPrice(product);
+                    finalPrice = (discountPrice != null) ? discountPrice : product.getPrice();
+                } catch (Exception e) {
+                    System.err.println("Error calculating promotion price: " + e.getMessage());
+                    finalPrice = product.getPrice();
+                }
+                
+                ReturnRequestItem item = new ReturnRequestItem();
+                item.setOrder(order);
+                item.setProduct(product);
+                item.setQuantity(quantity);
+                item.setUnitPrice(finalPrice);
+                item.setType("RECEIVE"); // QUAN TRỌNG: Set type
+                
+                returnRequestItemRepository.save(item);
+                System.out.println("Saved RECEIVE item: " + product.getName() + 
+                    ", qty: " + quantity + ", price: " + finalPrice);
+            }
         }
     }
 }

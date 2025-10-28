@@ -29,6 +29,8 @@ Page<Order> findByOrderDateBetweenOrderByOrderDateDesc(LocalDateTime from, Local
     // Method phân trang sắp xếp theo createdAt desc (dùng trong POSController)
     Page<Order> findAllByOrderByOrderDateDesc(Pageable pageable);
 
+
+    
     // ==================== CUSTOM FINDERS ====================
     List<Order> findByOrderDateBetween(LocalDateTime startDate, LocalDateTime endDate);
 

@@ -94,7 +94,7 @@
                     <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm') : '---'}"></td>
                     <td th:text="${order.createdBy != null ? order.createdBy : 'Admin'}"></td>
                     <td th:text="${order.customer != null && order.customer.name != null ? order.customer.name : 'Khách lẻ'}"></td>
-                    <td th:text="${order.finalAmount != null ? #numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></td>
+                    <td th:text="${order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></td>
                     <td>
     <span th:switch="${order.status.name()}">
         <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>

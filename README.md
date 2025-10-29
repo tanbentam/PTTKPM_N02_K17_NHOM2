@@ -568,13 +568,13 @@ sequenceDiagram
 
 **Các bước:**
 ```sh
-git clone https://github.com/your-repo/PTTKPM_N02_K17_NHOM2.git
+git clone https://github.com/tanbentam/PTTKPM_N02_K17_NHOM2.git
 cd PTTKPM_N02_K17_NHOM2
 ```
 
 **Cấu hình database trong `application.properties`:**
 ```properties
-spring.datasource.url= *url aiven database*
+spring.datasource.url= url_database
 spring.datasource.username=your_username
 spring.datasource.password=your_password
 spring.jpa.hibernate.ddl-auto=update
@@ -758,6 +758,10 @@ mvn spring-boot:run
 - Promotion 1-N PromotionProducts
 - Product 1-N PromotionProducts
 - Order 1-N ReturnRequestItems
+
+### 10.3. Sơ đồ cấu trúc Database
+
+![alt text](images/database-diagram.png)
 
 ---
 

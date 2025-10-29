@@ -2,6 +2,8 @@ package com.pttkpm.n02group2.quanlybanhang.Controller;
 
 import com.pttkpm.n02group2.quanlybanhang.Model.Order;
 import com.pttkpm.n02group2.quanlybanhang.Model.OrderItem;
+import com.pttkpm.n02group2.quanlybanhang.Model.ReturnRequestItem;
+import com.pttkpm.n02group2.quanlybanhang.Repository.ReturnRequestItemRepository;
 import com.pttkpm.n02group2.quanlybanhang.Model.Customer;
 import com.pttkpm.n02group2.quanlybanhang.Service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +18,17 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Controller
 @RequestMapping("/user/pos")
 public class UserRevenueController {
-    
+     @Autowired
+    private ReturnRequestItemRepository returnRequestItemRepository; // <-- THÊM DÒNG NÀY
+
     @Autowired
     private OrderService orderService;
 
@@ -112,18 +118,48 @@ public class UserRevenueController {
             orderPage = orderService.findAllOrders(pageable);
         }
 
-        // Tính tổng doanh thu của tất cả hóa đơn (không chỉ trang hiện tại)
-        double totalRevenue;
+        // Tính finalAmountAfterReturn cho các đơn RETURNED trong trang hiện tại
+        Map<Long, Double> finalAmountAfterReturnMap = new HashMap<>();
+        for (Order order : orderPage.getContent()) {
+            if (order.getStatus() != null && order.getStatus().name().equals("RETURNED")) {
+                double totalReturnAmount = order.getReturnItems() != null
+                        ? order.getReturnItems().stream().mapToDouble(i -> i.getQuantity() * i.getPrice()).sum()
+                        : 0.0;
+                double totalReceiveAmount = order.getReceiveItems() != null
+                        ? order.getReceiveItems().stream().mapToDouble(i -> i.getQuantity() * i.getPrice()).sum()
+                        : 0.0;
+                double originalTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0;
+                double actualDiscount = order.getVipDiscountAmount() != null ? order.getVipDiscountAmount() : 0;
+                double finalAmountAfterReturn = originalTotal - totalReturnAmount + totalReceiveAmount - actualDiscount;
+                finalAmountAfterReturnMap.put(order.getId(), finalAmountAfterReturn);
+            }
+        }
+        model.addAttribute("finalAmountAfterReturnMap", finalAmountAfterReturnMap);
+
+        // Tính tổng doanh thu của tất cả hóa đơn (không chỉ trang hiện tại) - luôn tính đúng cho RETURNED
+        double totalRevenue = 0;
+        List<Order> allOrders;
         if (from != null && to != null) {
-            totalRevenue = orderService.findOrdersByDateRange(from, to)
-                    .stream()
-                    .mapToDouble(order -> order.getFinalAmount() != null ? order.getFinalAmount() : order.getTotalAmount())
-                    .sum();
+            allOrders = orderService.findOrdersByDateRange(from, to);
         } else {
-            totalRevenue = orderService.findAllOrders()
-                    .stream()
-                    .mapToDouble(order -> order.getFinalAmount() != null ? order.getFinalAmount() : order.getTotalAmount())
-                    .sum();
+            allOrders = orderService.findAllOrders();
+        }
+        for (Order order : allOrders) {
+            if (order.getStatus() != null && order.getStatus().name().equals("RETURNED")) {
+                double totalReturnAmount = order.getReturnItems() != null
+                        ? order.getReturnItems().stream().mapToDouble(i -> i.getQuantity() * i.getPrice()).sum()
+                        : 0.0;
+                double totalReceiveAmount = order.getReceiveItems() != null
+                        ? order.getReceiveItems().stream().mapToDouble(i -> i.getQuantity() * i.getPrice()).sum()
+                        : 0.0;
+                double originalTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0;
+                double actualDiscount = order.getVipDiscountAmount() != null ? order.getVipDiscountAmount() : 0;
+                double finalAmountAfterReturn = originalTotal - totalReturnAmount + totalReceiveAmount - actualDiscount;
+                totalRevenue += finalAmountAfterReturn;
+            } else {
+                totalRevenue += order.getFinalAmount() != null ? order.getFinalAmount() :
+                                (order.getTotalAmount() != null ? order.getTotalAmount() : 0);
+            }
         }
 
         // Thêm các attribute vào model
@@ -144,19 +180,21 @@ public class UserRevenueController {
     }
 
     // Trang xem chi tiết hóa đơn
-    @GetMapping("/bill/{id}")
+   @GetMapping("/bill/{id}")
     public String viewOrder(@PathVariable Long id, Model model) {
         Order order = orderService.findById(id);
         if (order == null) {
             return "redirect:/user/pos/revenue";
         }
-        
+
         Customer customer = order.getCustomer();
         List<OrderItem> orderItems = order.getItems();
 
-        double originalTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0;
+        // Tính tổng tiền ban đầu chỉ dựa trên sản phẩm đã mua ban đầu
+        double originalTotal = orderItems != null
+                ? orderItems.stream().mapToDouble(i -> i.getQuantity() * i.getPrice()).sum()
+                : 0.0;
         double actualDiscount = order.getVipDiscountAmount() != null ? order.getVipDiscountAmount() : 0;
-        double actualPaidAmount = order.getFinalAmount() != null ? order.getFinalAmount() : originalTotal - actualDiscount;
         boolean hasDiscount = actualDiscount > 0;
 
         // Chuyển đổi phương thức thanh toán sang tiếng Việt
@@ -177,10 +215,34 @@ public class UserRevenueController {
         model.addAttribute("orderItems", orderItems);
         model.addAttribute("originalTotal", originalTotal);
         model.addAttribute("actualDiscount", actualDiscount);
-        model.addAttribute("actualPaidAmount", actualPaidAmount);
         model.addAttribute("hasDiscount", hasDiscount);
         model.addAttribute("paymentMethodVN", paymentMethodVN);
 
-        return "user/pos/bill";
+        // Nếu là hóa đơn đổi trả thì truyền thêm thông tin đổi trả và chuyển sang view riêng
+        if (order.getStatus() != null && order.getStatus().name().equals("RETURNED")) {
+            // Lấy thông tin sản phẩm đổi trả và nhận từ DB
+            List<ReturnRequestItem> returnItems = returnRequestItemRepository.findByOrderAndTypeIgnoreCase(order, "RETURN");
+            List<ReturnRequestItem> receiveItems = returnRequestItemRepository.findByOrderAndTypeIgnoreCase(order, "RECEIVE");
+
+            double totalReturnAmount = returnItems != null
+                    ? returnItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum()
+                    : 0.0;
+            double totalReceiveAmount = receiveItems != null
+                    ? receiveItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum()
+                    : 0.0;
+            double actualPaidAmount = originalTotal - totalReturnAmount + totalReceiveAmount - actualDiscount;
+
+            model.addAttribute("returnItems", returnItems);
+            model.addAttribute("receiveItems", receiveItems);
+            model.addAttribute("totalReturnAmount", totalReturnAmount);
+            model.addAttribute("totalReceiveAmount", totalReceiveAmount);
+            model.addAttribute("actualPaidAmount", actualPaidAmount);
+
+            return "user/pos/bill_returned";
+        } else {
+            double actualPaidAmount = order.getFinalAmount() != null ? order.getFinalAmount() : originalTotal - actualDiscount;
+            model.addAttribute("actualPaidAmount", actualPaidAmount);
+            return "user/pos/bill";
+        }
     }
 }

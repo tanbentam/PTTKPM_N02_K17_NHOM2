@@ -16,15 +16,20 @@ public interface ReturnRequestItemRepository extends JpaRepository<ReturnRequest
     // Lấy tất cả sản phẩm đổi trả của một đơn hàng
     List<ReturnRequestItem> findByOrder(Order order);
 
-    // Lấy sản phẩm đổi trả theo đơn hàng và loại (RETURN hoặc RECEIVE)
+    // Lấy sản phẩm trả lại (type = 'RETURN') của một đơn hàng (không phân biệt hoa thường)
+    List<ReturnRequestItem> findByOrderAndTypeIgnoreCase(Order order, String type);
+
+    // Lấy sản phẩm trả lại (type = 'RETURN') của một đơn hàng (phân biệt hoa thường)
     List<ReturnRequestItem> findByOrderAndType(Order order, String type);
 
     // Lấy sản phẩm đổi trả theo id đơn hàng (dùng khi không có object Order)
     @Query("SELECT r FROM ReturnRequestItem r WHERE r.order.id = :orderId")
     List<ReturnRequestItem> findByOrderId(@Param("orderId") Long orderId);
-    
-@Query("select r from ReturnRequestItem r join fetch r.product where r.order = :order")
+
+    // Lấy sản phẩm đổi trả kèm thông tin sản phẩm (fetch product)
+    @Query("select r from ReturnRequestItem r join fetch r.product where r.order = :order")
     List<ReturnRequestItem> findByOrderFetchProduct(@Param("order") Order order);
+
     // Kiểm tra đơn hàng đã có sản phẩm đổi trả chưa
     boolean existsByOrder(Order order);
 

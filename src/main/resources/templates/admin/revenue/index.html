@@ -205,40 +205,45 @@
                                     <th class="text-center">Thao tác</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr th:each="order : ${orders}">
-                                    <td>
-                                        <strong th:text="${order.orderNumber}"></strong>
-                                    </td>
-                                    <td th:text="${order.customer.name}"></td>
-                                    <td th:text="${#dates.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
-                                    <td>
-                                        <span th:switch="${order.status != null ? order.status.name() : ''}">
-                                            <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
-                                            <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
-                                            <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
-                                            <span th:case="'RETURNED'" class="badge bg-info text-dark">Đã trả hàng</span>
-                                            <span th:case="*">Khác</span>
-                                        </span>
-                                    </td>
-                                    <td class="text-end fw-bold">
-                                        <span th:text="${order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></span>
-                                        <small th:if="${order.status != null and order.status.name() == 'RETURNED'}" class="text-muted"> (Sau đổi trả)</small>
-                                    </td>
-                                    <td class="text-center">
-    <a th:href="@{/admin/revenue/view/{id}(id=${order.id})}"
-       class="btn btn-sm btn-outline-info">
-        <i class="bi bi-eye"></i> Chi tiết
-    </a>
+                            <!-- ...existing code... -->
+<tbody>
+    <tr th:each="order : ${orders}">
+        <td>
+            <strong th:text="${order.orderNumber}"></strong>
+        </td>
+        <td th:text="${order.customer.name}"></td>
+        <td th:text="${#dates.format(order.orderDate, 'dd/MM/yyyy HH:mm')}"></td>
+        <td>
+            <span th:switch="${order.status != null ? order.status.name() : ''}">
+                <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+                <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
+                <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                <span th:case="'RETURNED'" class="badge bg-info text-dark">Đã trả hàng</span>
+                <span th:case="*">Khác</span>
+            </span>
+        </td>
+        <td class="text-end fw-bold">
+    <span th:if="${order.status != null and order.status.name() == 'RETURNED'}"
+          th:text="${finalAmountAfterReturnMap[order.id] != null ? #numbers.formatDecimal(finalAmountAfterReturnMap[order.id], 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></span>
+    <span th:if="${order.status == null or order.status.name() != 'RETURNED'}"
+          th:text="${order.finalAmount != null ? #numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : (order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---')}"></span>
+    <small th:if="${order.status != null and order.status.name() == 'RETURNED'}" class="text-muted"> (Sau đổi trả)</small>
 </td>
-                                </tr>
-                                <tr th:if="${orders.empty}">
-                                    <td colspan="6" class="text-center py-4">
-                                        <i class="bi bi-inbox display-4 text-muted"></i>
-                                        <p class="text-muted mt-2">Không có hóa đơn nào trong khoảng thời gian này</p>
-                                    </td>
-                                </tr>
-                            </tbody>
+        <td class="text-center">
+            <a th:href="@{/admin/revenue/view/{id}(id=${order.id})}"
+               class="btn btn-sm btn-outline-info">
+                <i class="bi bi-eye"></i> Chi tiết
+            </a>
+        </td>
+    </tr>
+    <tr th:if="${orders.empty}">
+        <td colspan="6" class="text-center py-4">
+            <i class="bi bi-inbox display-4 text-muted"></i>
+            <p class="text-muted mt-2">Không có hóa đơn nào trong khoảng thời gian này</p>
+        </td>
+    </tr>
+</tbody>
+<!-- ...existing code... -->
                         </table>
                     </div>
                     <!-- Pagination -->

@@ -209,6 +209,7 @@
                             </thead>
                             <!-- ...existing code... -->
 <!-- ...existing code... -->
+<!-- ...existing code... -->
 <tbody>
     <tr th:each="order : ${orders}">
         <td>
@@ -226,10 +227,10 @@
             </span>
         </td>
         <td class="text-end fw-bold">
-            <!-- Hiển thị đúng tổng tiền sau đổi trả nếu trạng thái RETURNED, còn lại lấy finalAmount -->
-            <span th:if="${order.status != null and order.status.name() == 'RETURNED'}"
-                  th:text="${finalAmountAfterReturnMap[order.id] != null ? #numbers.formatDecimal(finalAmountAfterReturnMap[order.id], 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></span>
-            <span th:if="${order.status == null or order.status.name() != 'RETURNED'}"
+            <!-- Luôn hiển thị đúng số tiền đã dùng để tính tổng doanh thu -->
+            <span th:if="${finalAmountAfterReturnMap[order.id] != null}"
+                  th:text="${#numbers.formatDecimal(finalAmountAfterReturnMap[order.id], 0, 'COMMA', 0, 'POINT') + ' VNĐ'}"></span>
+            <span th:if="${finalAmountAfterReturnMap[order.id] == null}"
                   th:text="${order.finalAmount != null ? #numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : (order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---')}"></span>
             <small th:if="${order.status != null and order.status.name() == 'RETURNED'}" class="text-muted"> (Sau đổi trả)</small>
         </td>
@@ -247,6 +248,7 @@
         </td>
     </tr>
 </tbody>
+<!-- ...existing code... -->
 <!-- ...existing code... -->
                         </table>
                     </div>

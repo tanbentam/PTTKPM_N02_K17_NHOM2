@@ -64,11 +64,13 @@
                 <i class="fas fa-percent"></i> Khuyến Mại
             </a>
         </li>
-                <li class="nav-item mb-2">
-                    <a class="nav-link" href="/admin/orders">
-                        <i class="fas fa-shopping-cart"></i> Đơn Hàng
-                    </a>
-                </li>
+                <!-- ...existing code... -->
+<li class="nav-item">
+    <a class="nav-link" href="/admin/returns">
+        <i class="fas fa-exchange-alt"></i>Đơn Đổi Trả
+    </a>
+</li>
+<!-- ...existing code... -->
                 <li class="nav-item mb-2">
                     <a class="nav-link active" href="/admin/revenue">
                         <i class="fas fa-coins"></i> Xem Doanh Thu
@@ -206,6 +208,7 @@
                                 </tr>
                             </thead>
                             <!-- ...existing code... -->
+<!-- ...existing code... -->
 <tbody>
     <tr th:each="order : ${orders}">
         <td>
@@ -223,12 +226,13 @@
             </span>
         </td>
         <td class="text-end fw-bold">
-    <span th:if="${order.status != null and order.status.name() == 'RETURNED'}"
-          th:text="${finalAmountAfterReturnMap[order.id] != null ? #numbers.formatDecimal(finalAmountAfterReturnMap[order.id], 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></span>
-    <span th:if="${order.status == null or order.status.name() != 'RETURNED'}"
-          th:text="${order.finalAmount != null ? #numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : (order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---')}"></span>
-    <small th:if="${order.status != null and order.status.name() == 'RETURNED'}" class="text-muted"> (Sau đổi trả)</small>
-</td>
+            <!-- Hiển thị đúng tổng tiền sau đổi trả nếu trạng thái RETURNED, còn lại lấy finalAmount -->
+            <span th:if="${order.status != null and order.status.name() == 'RETURNED'}"
+                  th:text="${finalAmountAfterReturnMap[order.id] != null ? #numbers.formatDecimal(finalAmountAfterReturnMap[order.id], 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></span>
+            <span th:if="${order.status == null or order.status.name() != 'RETURNED'}"
+                  th:text="${order.finalAmount != null ? #numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : (order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---')}"></span>
+            <small th:if="${order.status != null and order.status.name() == 'RETURNED'}" class="text-muted"> (Sau đổi trả)</small>
+        </td>
         <td class="text-center">
             <a th:href="@{/admin/revenue/view/{id}(id=${order.id})}"
                class="btn btn-sm btn-outline-info">

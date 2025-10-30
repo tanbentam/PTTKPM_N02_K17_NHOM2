@@ -112,110 +112,111 @@ public class ReturnRequestController {
 
     // Xử lý gửi yêu cầu đổi trả hàng
     @PostMapping("/return/{orderId}")
-    public String submitReturnRequest(
-            @PathVariable Long orderId,
-            @RequestParam(value = "oldProductIds", required = false) List<Long> oldProductIds,
-            @RequestParam(value = "oldQuantities", required = false) List<Integer> oldQuantities,
-            @RequestParam(value = "newProductIds", required = false) List<Long> newProductIds,
-            @RequestParam(value = "newQuantities", required = false) List<Integer> newQuantities,
-            @RequestParam(value = "reason", required = false) String reason,
-            RedirectAttributes redirectAttributes) {
+public String submitReturnRequest(
+        @PathVariable Long orderId,
+        @RequestParam(value = "oldProductIds", required = false) List<Long> oldProductIds,
+        @RequestParam(value = "oldQuantities", required = false) List<Integer> oldQuantities,
+        @RequestParam(value = "newProductIds", required = false) List<Long> newProductIds,
+        @RequestParam(value = "newQuantities", required = false) List<Integer> newQuantities,
+        @RequestParam(value = "reason", required = false) String reason,
+        RedirectAttributes redirectAttributes) {
 
-        try {
-            System.out.println("=== SUBMIT RETURN REQUEST DEBUG ===");
-            System.out.println("Order ID: " + orderId);
-            System.out.println("Old Product IDs: " + oldProductIds);
-            System.out.println("Old Quantities: " + oldQuantities);
-            System.out.println("New Product IDs: " + newProductIds);
-            System.out.println("New Quantities: " + newQuantities);
-            System.out.println("Reason: " + reason);
+    try {
+        System.out.println("=== SUBMIT RETURN REQUEST DEBUG ===");
+        System.out.println("Order ID: " + orderId);
+        System.out.println("Old Product IDs: " + oldProductIds);
+        System.out.println("Old Quantities: " + oldQuantities);
+        System.out.println("New Product IDs: " + newProductIds);
+        System.out.println("New Quantities: " + newQuantities);
+        System.out.println("Reason: " + reason);
 
-            // Kiểm tra đơn hàng tồn tại
-            Order oldOrder = orderService.findById(orderId);
-            if (oldOrder == null) {
-                redirectAttributes.addFlashAttribute("error", "Đơn hàng không tồn tại.");
-                return "redirect:/user/pos/history";
-            }
-
-            // Kiểm tra trạng thái đơn hàng
-            if (oldOrder.getStatus() != Order.OrderStatus.COMPLETED) {
-                redirectAttributes.addFlashAttribute("error", "Chỉ có thể đổi trả đơn hàng đã hoàn thành.");
-                return "redirect:/user/pos/history";
-            }
-
-            // Validation dữ liệu đầu vào
-            if (oldProductIds == null || oldProductIds.isEmpty()) {
-                redirectAttributes.addFlashAttribute("error", "Vui lòng chọn ít nhất một sản phẩm muốn đổi.");
-                return "redirect:/user/pos/return/" + orderId;
-            }
-
-            if (newProductIds == null || newProductIds.isEmpty()) {
-                redirectAttributes.addFlashAttribute("error", "Vui lòng chọn ít nhất một sản phẩm muốn nhận.");
-                return "redirect:/user/pos/return/" + orderId;
-            }
-
-            if (reason == null || reason.trim().isEmpty()) {
-                redirectAttributes.addFlashAttribute("error", "Vui lòng nhập lý do đổi trả.");
-                return "redirect:/user/pos/return/" + orderId;
-            }
-
-            // Validation và tính toán sản phẩm trả lại
-            double totalOld = validateAndCalculateReturnItems(oldOrder, oldProductIds, oldQuantities, redirectAttributes);
-            if (totalOld < 0) {
-                return "redirect:/user/pos/return/" + orderId; // Error đã được set trong method
-            }
-
-            // Validation và tính toán sản phẩm muốn nhận
-            double totalNew = validateAndCalculateReceiveItems(newProductIds, newQuantities, redirectAttributes);
-            if (totalNew < 0) {
-                return "redirect:/user/pos/return/" + orderId; // Error đã được set trong method
-            }
-
-            // Kiểm tra giá trị đổi trả
-            if (totalNew < totalOld) {
-                redirectAttributes.addFlashAttribute("error", 
-                    "Tổng giá trị sản phẩm nhận (" + String.format("%,.0f", totalNew) + 
-                    " VNĐ) phải lớn hơn hoặc bằng tổng giá trị sản phẩm đổi (" + 
-                    String.format("%,.0f", totalOld) + " VNĐ).");
-                return "redirect:/user/pos/return/" + orderId;
-            }
-
-            // Xóa các return request items cũ nếu có
-            List<ReturnRequestItem> existingItems = returnRequestItemRepository.findByOrder(oldOrder);
-            if (!existingItems.isEmpty()) {
-                returnRequestItemRepository.deleteAll(existingItems);
-                System.out.println("Deleted " + existingItems.size() + " existing return request items");
-            }
-
-            // Lưu sản phẩm trả lại (RETURN)
-            saveReturnItems(oldOrder, oldProductIds, oldQuantities);
-
-            // Lưu sản phẩm muốn nhận (RECEIVE)
-            saveReceiveItems(oldOrder, newProductIds, newQuantities);
-
-            // Cập nhật trạng thái đơn hàng
-            oldOrder.setStatus(Order.OrderStatus.RETURN_REQUESTED);
-            orderService.save(oldOrder);
-
-            System.out.println("=== RETURN REQUEST COMPLETED ===");
-
-            // Thông báo thành công
-            redirectAttributes.addFlashAttribute("message", 
-                "Yêu cầu đổi trả đã được gửi thành công! " +
-                "Mã đơn hàng: " + oldOrder.getOrderNumber() + ". " +
-                "Admin sẽ xem xét và phản hồi trong thời gian sớm nhất. " +
-                "Chênh lệch cần thanh toán: " + String.format("%,.0f", (totalNew - totalOld)) + " VNĐ.");
-
+        // Kiểm tra đơn hàng tồn tại
+        Order oldOrder = orderService.findById(orderId);
+        if (oldOrder == null) {
+            redirectAttributes.addFlashAttribute("error", "Đơn hàng không tồn tại.");
             return "redirect:/user/pos/history";
+        }
 
-        } catch (Exception e) {
-            System.err.println("ERROR in submitReturnRequest: " + e.getMessage());
-            e.printStackTrace();
-            redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra khi xử lý yêu cầu: " + e.getMessage());
+        // Kiểm tra trạng thái đơn hàng
+        if (oldOrder.getStatus() != Order.OrderStatus.COMPLETED) {
+            redirectAttributes.addFlashAttribute("error", "Chỉ có thể đổi trả đơn hàng đã hoàn thành.");
+            return "redirect:/user/pos/history";
+        }
+
+        // Validation dữ liệu đầu vào
+        if (oldProductIds == null || oldProductIds.isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Vui lòng chọn ít nhất một sản phẩm muốn đổi.");
             return "redirect:/user/pos/return/" + orderId;
         }
-    }
 
+        if (newProductIds == null || newProductIds.isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Vui lòng chọn ít nhất một sản phẩm muốn nhận.");
+            return "redirect:/user/pos/return/" + orderId;
+        }
+
+        if (reason == null || reason.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Vui lòng nhập lý do đổi trả.");
+            return "redirect:/user/pos/return/" + orderId;
+        }
+
+        // Validation và tính toán sản phẩm trả lại
+        double totalOld = validateAndCalculateReturnItems(oldOrder, oldProductIds, oldQuantities, redirectAttributes);
+        if (totalOld < 0) {
+            return "redirect:/user/pos/return/" + orderId; // Error đã được set trong method
+        }
+
+        // Validation và tính toán sản phẩm muốn nhận
+        double totalNew = validateAndCalculateReceiveItems(newProductIds, newQuantities, redirectAttributes);
+        if (totalNew < 0) {
+            return "redirect:/user/pos/return/" + orderId; // Error đã được set trong method
+        }
+
+        // Kiểm tra giá trị đổi trả
+        if (totalNew < totalOld) {
+            redirectAttributes.addFlashAttribute("error", 
+                "Tổng giá trị sản phẩm nhận (" + String.format("%,.0f", totalNew) + 
+                " VNĐ) phải lớn hơn hoặc bằng tổng giá trị sản phẩm đổi (" + 
+                String.format("%,.0f", totalOld) + " VNĐ).");
+            return "redirect:/user/pos/return/" + orderId;
+        }
+
+        // Xóa các return request items cũ nếu có
+        List<ReturnRequestItem> existingItems = returnRequestItemRepository.findByOrder(oldOrder);
+        if (!existingItems.isEmpty()) {
+            returnRequestItemRepository.deleteAll(existingItems);
+            System.out.println("Deleted " + existingItems.size() + " existing return request items");
+        }
+
+        // Lưu sản phẩm trả lại (RETURN)
+        saveReturnItems(oldOrder, oldProductIds, oldQuantities);
+
+        // Lưu sản phẩm muốn nhận (RECEIVE)
+        saveReceiveItems(oldOrder, newProductIds, newQuantities);
+
+        // Cập nhật trạng thái đơn hàng và LƯU NGÀY, LÝ DO ĐỔI TRẢ
+        oldOrder.setStatus(Order.OrderStatus.RETURN_REQUESTED);
+        oldOrder.setReturnRequestDate(LocalDateTime.now()); // Lưu ngày gửi yêu cầu
+        oldOrder.setReturnReason(reason); // Lưu lý do đổi trả
+        orderService.save(oldOrder);
+
+        System.out.println("=== RETURN REQUEST COMPLETED ===");
+
+        // Thông báo thành công
+        redirectAttributes.addFlashAttribute("message", 
+            "Yêu cầu đổi trả đã được gửi thành công! " +
+            "Mã đơn hàng: " + oldOrder.getOrderNumber() + ". " +
+            "Admin sẽ xem xét và phản hồi trong thời gian sớm nhất. " +
+            "Chênh lệch cần thanh toán: " + String.format("%,.0f", (totalNew - totalOld)) + " VNĐ.");
+
+        return "redirect:/user/pos/history";
+
+    } catch (Exception e) {
+        System.err.println("ERROR in submitReturnRequest: " + e.getMessage());
+        e.printStackTrace();
+        redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra khi xử lý yêu cầu: " + e.getMessage());
+        return "redirect:/user/pos/return/" + orderId;
+    }
+}
     // Helper method: Validate và tính toán sản phẩm trả lại
     private double validateAndCalculateReturnItems(Order order, List<Long> productIds, List<Integer> quantities, RedirectAttributes redirectAttributes) {
         double total = 0;
@@ -319,7 +320,6 @@ public class ReturnRequestController {
         for (int i = 0; i < productIds.size(); i++) {
             Long productId = productIds.get(i);
             Integer quantity = quantities.get(i);
-            
             Product product = productService.findById(productId);
             if (product != null && quantity > 0) {
                 // Tính giá cuối cùng (có khuyến mại nếu có)

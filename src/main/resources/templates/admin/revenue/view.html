@@ -67,7 +67,7 @@
                             </table>
                         </div>
 
-                        <!-- Thông tin đổi trả luôn hiển thị -->
+                        <!-- Thông tin đổi trả -->
                         <div class="row">
                             <div class="col-md-6">
                                 <h6 class="text-danger"><i class="fas fa-exchange-alt"></i> Sản phẩm đổi/trả</h6>
@@ -85,17 +85,17 @@
                                             <tr th:each="item : ${returnItems}">
                                                 <td th:text="${item.product != null ? item.product.name : 'Sản phẩm không xác định'}"></td>
                                                 <td th:text="${item.quantity}"></td>
-                                                <td th:text="|${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
-                                                <td th:text="|${#numbers.formatDecimal(item.quantity * item.price, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
+                                                <td th:text="|${#numbers.formatDecimal(item.unitPrice, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
+                                                <td th:text="|${#numbers.formatDecimal(item.quantity * item.unitPrice, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
                                             </tr>
-                                            <tr th:if="${#lists.isEmpty(returnItems)}">
+                                            <tr th:if="${returnItems == null or #lists.isEmpty(returnItems)}">
                                                 <td colspan="4" class="text-center text-muted">Không có sản phẩm đổi/trả</td>
                                             </tr>
                                         </tbody>
                                         <tfoot>
                                             <tr>
                                                 <th colspan="3" class="text-end">Tổng tiền sản phẩm đổi:</th>
-                                                <th th:text="|-${#numbers.formatDecimal(totalReturnAmount != null ? totalReturnAmount : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</th>
+                                                <th class="text-danger" th:text="|-${#numbers.formatDecimal(totalReturnAmount != null ? totalReturnAmount : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</th>
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -117,17 +117,21 @@
                                             <tr th:each="item : ${receiveItems}">
                                                 <td th:text="${item.product != null ? item.product.name : 'Sản phẩm không xác định'}"></td>
                                                 <td th:text="${item.quantity}"></td>
-                                                <td th:text="|${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
-                                                <td th:text="|${#numbers.formatDecimal(item.quantity * item.price, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
+                                                <td th:text="|${#numbers.formatDecimal(item.unitPrice, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
+                                                <td th:text="|${#numbers.formatDecimal(item.quantity * item.unitPrice, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
                                             </tr>
-                                            <tr th:if="${#lists.isEmpty(receiveItems)}">
+                                            <tr th:if="${receiveItems == null or #lists.isEmpty(receiveItems)}">
                                                 <td colspan="4" class="text-center text-muted">Không có sản phẩm nhận sau đổi</td>
                                             </tr>
                                         </tbody>
                                         <tfoot>
                                             <tr>
                                                 <th colspan="3" class="text-end">Tổng tiền sản phẩm nhận:</th>
-                                                <th th:text="|+${#numbers.formatDecimal(totalReceiveAmount != null ? totalReceiveAmount : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">+0 VNĐ</th>
+                                                <th class="text-success" th:text="|+${#numbers.formatDecimal(totalReceiveAmount != null ? totalReceiveAmount : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">+0 VNĐ</th>
+                                            </tr>
+                                            <tr th:if="${hasDiscount and receiveVipDiscount > 0}">
+                                                <th colspan="3" class="text-end text-success">Giảm giá VIP cho sản phẩm nhận:</th>
+                                                <th class="text-success" th:text="|-${#numbers.formatDecimal(receiveVipDiscount != null ? receiveVipDiscount : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</th>
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -135,38 +139,48 @@
                             </div>
                         </div>
 
-                        <!-- Tóm tắt thanh toán -->
-                        <div class="row mt-4">
-                            <div class="col-md-6 offset-md-6">
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <td><strong>Tổng tiền ban đầu:</strong></td>
-                                        <td class="text-end" th:text="|${#numbers.formatDecimal(originalTotal != null ? originalTotal : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">0 VNĐ</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Tiền sản phẩm đổi:</strong></td>
-                                        <td class="text-end text-danger" th:text="|-${#numbers.formatDecimal(totalReturnAmount != null ? totalReturnAmount : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Tiền sản phẩm nhận:</strong></td>
-                                        <td class="text-end text-success" th:text="|+${#numbers.formatDecimal(totalReceiveAmount != null ? totalReceiveAmount : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">+0 VNĐ</td>
-                                    </tr>
-                                    <tr th:if="${hasDiscount and actualDiscount > 0}">
-                                        <td><strong>Giảm giá VIP:</strong></td>
-                                        <td class="text-end text-success" th:text="|-${#numbers.formatDecimal(actualDiscount != null ? actualDiscount : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Thành tiền sau đổi trả:</strong></td>
-                                        <td class="text-end fw-bold text-primary" th:text="|${#numbers.formatDecimal(actualPaidAmount != null ? actualPaidAmount : 0, 0, 'COMMA', 0, 'POINT')} VNĐ|">0 VNĐ</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Phương thức thanh toán:</strong></td>
-                                        <td class="text-end" th:text="${paymentMethodVN != null ? paymentMethodVN : 'Chưa xác định'}">Chưa xác định</td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-
+                        
+<!-- Tóm tắt thanh toán (hiển thị đúng các giá trị đã truyền từ controller) -->
+<!-- ...existing code... -->
+<div class="row mt-4">
+    <div class="col-md-6 offset-md-6">
+        <table class="table table-borderless">
+            <tr>
+                <td><strong>Tạm tính (giá trị hàng hóa gốc):</strong></td>
+                <td class="text-end fw-bold" th:text="|${#numbers.formatDecimal(baseTotal, 0, 'COMMA', 0, 'POINT')} VNĐ|">0 VNĐ</td>
+            </tr>
+            <tr th:if="${hasDiscount and actualDiscount > 0}">
+                <td><strong>Giảm giá VIP hóa đơn gốc:</strong></td>
+                <td class="text-end text-success" th:text="|-${#numbers.formatDecimal(actualDiscount, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</td>
+            </tr>
+            <tr>
+                <td><strong>Tổng tiền khách thanh toán ban đầu (đã giảm giá vip):</strong></td>
+                <td class="text-end fw-bold" th:text="|${#numbers.formatDecimal(originalTotal, 0, 'COMMA', 0, 'POINT')} VNĐ|">0 VNĐ</td>
+            </tr>
+            <tr>
+                <td><strong>Tiền sản phẩm đổi:</strong></td>
+                <td class="text-end text-danger" th:text="|-${#numbers.formatDecimal(totalReturnAmount, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</td>
+            </tr>
+            <tr>
+                <td><strong>Tiền sản phẩm nhận:</strong></td>
+                <td class="text-end text-success" th:text="|+${#numbers.formatDecimal(totalReceiveAmount, 0, 'COMMA', 0, 'POINT')} VNĐ|">+0 VNĐ</td>
+            </tr>
+            <tr th:if="${hasDiscount and receiveVipDiscount > 0}">
+                <td><strong>Giảm giá VIP cho sản phẩm nhận:</strong></td>
+                <td class="text-end text-success" th:text="|-${#numbers.formatDecimal(receiveVipDiscount, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</td>
+            </tr>
+            <tr>
+                <td><strong>Thành tiền sau đổi trả:</strong></td>
+                <td class="text-end fw-bold text-primary" th:text="|${#numbers.formatDecimal(actualPaidAmount, 0, 'COMMA', 0, 'POINT')} VNĐ|">0 VNĐ</td>
+            </tr>
+            <tr>
+                <td><strong>Phương thức thanh toán:</strong></td>
+                <td class="text-end" th:text="${paymentMethodVN != null ? paymentMethodVN : 'Chưa xác định'}">Chưa xác định</td>
+            </tr>
+        </table>
+    </div>
+</div>
+<!-- ...existing code... -->
                         <!-- Nút quay lại -->
                         <div class="text-center mt-4">
                             <a th:href="@{/admin/revenue}" class="btn btn-secondary">

@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Chi tiết hóa đơn</title>
+    <title>Chi tiết hóa đơn khách hàng</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -17,54 +17,64 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <!-- Thông tin khách hàng -->
+                        <!-- Thông tin khách hàng và hóa đơn -->
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <h6>Thông tin khách hàng</h6>
-                                <p><strong>Tên:</strong> <span th:text="${customer != null ? customer.name : 'Khách vãng lai'}">Nguyễn Văn A</span></p>
-                                <p><strong>SĐT:</strong> <span th:text="${customer != null and customer.phone != null ? customer.phone : ''}">0123456789</span></p>
-                                
-                                <!-- Thêm thông tin địa chỉ đầy đủ -->
-                                <p th:if="${customer != null and customer.address != null and !customer.address.isEmpty()}">
-                                    <strong>Địa chỉ:</strong> <span th:text="${customer.address}">123 Đường ABC</span>
+                                <p>
+                                    <strong>Tên:</strong>
+                                    <span th:text="${order.customer != null ? order.customer.name : 'Khách vãng lai'}">Khách lẻ</span>
                                 </p>
-                                <p th:if="${customer != null and (customer.ward != null or customer.district != null or customer.province != null)}">
-                                    <strong>Khu vực:</strong> 
-                                    <span th:text="${(customer.ward != null and !customer.ward.isEmpty() ? customer.ward + ', ' : '') + 
-                                                    (customer.district != null and !customer.district.isEmpty() ? customer.district + ', ' : '') + 
-                                                    (customer.province != null and !customer.province.isEmpty() ? customer.province : '')}">Phường 1, Quận 1, TP.HCM</span>
+                                <p>
+                                    <strong>SĐT:</strong>
+                                    <span th:text="${order.customer != null and order.customer.phone != null ? order.customer.phone : ''}"></span>
                                 </p>
-                                
-                                <!-- Thêm thông tin ngày sinh -->
-                                <p th:if="${customer != null and customer.dateOfBirth != null}">
-                                    <strong>Ngày sinh:</strong> <span th:text="${#temporals.format(customer.dateOfBirth, 'dd/MM/yyyy')}">01/01/1990</span>
+                                <p th:if="${order.customer != null and order.customer.address != null and !order.customer.address.isEmpty()}">
+                                    <strong>Địa chỉ:</strong>
+                                    <span th:text="${order.customer.address}">123 Đường ABC</span>
                                 </p>
-                                
-                                <p><strong>VIP:</strong> 
-                                    <span th:if="${customer != null and customer.isVip}" class="badge bg-success">Có</span>
-                                    <span th:unless="${customer != null and customer.isVip}" class="badge bg-secondary">Không</span>
+                                <p th:if="${order.customer != null and (order.customer.ward != null or order.customer.district != null or order.customer.province != null)}">
+                                    <strong>Khu vực:</strong>
+                                    <span th:text="${(order.customer.ward != null and !order.customer.ward.isEmpty() ? order.customer.ward + ', ' : '') +
+                                                    (order.customer.district != null and !order.customer.district.isEmpty() ? order.customer.district + ', ' : '') +
+                                                    (order.customer.province != null and !order.customer.province.isEmpty() ? order.customer.province : '')}">Phường 1, Quận 1, TP.HCM</span>
                                 </p>
+                                <p th:if="${order.customer != null and order.customer.dateOfBirth != null}">
+                                    <strong>Ngày sinh:</strong>
+                                    <span th:text="${#temporals.format(order.customer.dateOfBirth, 'dd/MM/yyyy')}">01/01/1990</span>
+                                </p>
+                                <p>
+                                    <strong>VIP:</strong>
+                                    <span th:if="${order.customer != null and order.customer.vip}" class="badge bg-success">Có</span>
+                                    <span th:unless="${order.customer != null and order.customer.vip}" class="badge bg-secondary">Không</span>
+                                </p>
+                                <div th:if="${order.customer != null and order.customer.vip}" class="alert alert-success d-flex align-items-center mt-2" role="alert">
+                                    <i class="fas fa-gift me-2"></i>
+                                    <div>
+                                        <strong>Khách hàng VIP!</strong> Được giảm
+                                        <strong th:text="${order.customer.vipDiscountPercent ?: 5}">5</strong>% cho mọi hóa đơn từ bây giờ!
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
-    <h6>Thông tin hóa đơn</h6>
-    <p><strong>Mã hóa đơn:</strong> <span th:text="${order.orderNumber}">POS-001</span></p>
-    <p><strong>Ngày tạo:</strong> <span th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2025 10:30</span></p>
-    <p><strong>Trạng thái:</strong>
-                <span th:switch="${order.status.name()}">
-        <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
-        <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
-        <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
-        <span th:case="'RETURNED'" class="badge bg-info text-dark">Đã trả hàng</span>
-        <span th:case="*">Khác</span>
-    </span>
-
-    </p>
-</div>
+                                <h6>Thông tin hóa đơn</h6>
+                                <p><strong>Mã hóa đơn:</strong> <span th:text="${order.orderNumber}">POS-001</span></p>
+                                <p><strong>Ngày tạo:</strong> <span th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}">23/10/2025 14:18</span></p>
+                                <p><strong>Trạng thái:</strong>
+                                    <span th:switch="${order.status != null ? order.status.name() : ''}">
+                                        <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+                                        <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
+                                        <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                                        <span th:case="*">Khác</span>
+                                    </span>
+                                </p>
+                                
+                            </div>
                         </div>
-                        
-                        <!-- Danh sách sản phẩm -->
+
+                        <!-- Danh sách sản phẩm đã mua -->
                         <h6>Danh sách sản phẩm đã mua</h6>
-                        <div class="table-responsive">
+                        <div class="table-responsive mb-4">
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -76,59 +86,42 @@
                                 </thead>
                                 <tbody>
                                     <tr th:each="item : ${orderItems}">
-                                        <td th:text="${item.product != null ? item.product.name : 'Sản phẩm không xác định'}">Sản phẩm A</td>
-                                        <td th:text="${item.quantity}">1</td>
-                                        <td th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">100,000 VNĐ</td>
-                                        <td th:text="${#numbers.formatDecimal(item.quantity * item.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">100,000 VNĐ</td>
+                                        <td th:text="${item.product != null ? item.product.name : 'Sản phẩm không xác định'}"></td>
+                                        <td th:text="${item.quantity}"></td>
+                                        <td th:text="|${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
+                                        <td th:text="|${#numbers.formatDecimal(item.quantity * item.price, 0, 'COMMA', 0, 'POINT')} VNĐ|"></td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-                        
-                        <!-- ...existing code trước phần tóm tắt thanh toán... -->
 
                         <!-- Tóm tắt thanh toán -->
                         <div class="row mt-4">
-                            <div class="col-md-6 offset-md-6">
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <td><strong>Tổng tiền:</strong></td>
-                                        <td class="text-end" th:text="${#numbers.formatDecimal(originalTotal, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">199,000 VNĐ</td>
-                                    </tr>
-                                    
-                                    <!-- CHỈ hiển thị giảm giá khi thực sự có giảm giá trong hóa đơn -->
-                                    <tr th:if="${hasDiscount and actualDiscount > 0}">
-                                        <td><strong>Giảm giá VIP:</strong></td>
-                                        <td class="text-end text-success" th:text="'-' + ${#numbers.formatDecimal(actualDiscount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">-9,950 VNĐ</td>
-                                    </tr>
-                                    
-                                    <tr>
-                                        <td><strong>Thành tiền:</strong></td>
-                                        <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(actualPaidAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">189,050 VNĐ</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Phương thức thanh toán:</strong></td>
-                                        <td class="text-end">
-    <!-- Chuyển đổi phương thức thanh toán sang tiếng Việt -->
-    <span th:if="${order.paymentMethod == 'CASH'}" th:text="'Tiền mặt'">Tiền mặt</span>
-    <span th:if="${order.paymentMethod == 'TRANSFER' or order.paymentMethod == 'transfer'}" th:text="'Chuyển khoản'">Chuyển khoản</span>
-    <span th:if="${order.paymentMethod == 'CARD' or order.paymentMethod == 'card'}" th:text="'Thẻ'">Thẻ</span>
-    <!-- Fallback cho các trường hợp khác -->
-    <span th:unless="${order.paymentMethod == 'CASH' or 
-                    order.paymentMethod == 'TRANSFER' or order.paymentMethod == 'transfer' or
-                    order.paymentMethod == 'CARD' or order.paymentMethod == 'card'}" 
-          th:text="${order.paymentMethod ?: 'Chưa xác định'}">Chưa xác định</span>
-</td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-
-
-                        <!-- Nút quay lại -->
+    <div class="col-md-6 offset-md-6">
+        <table class="table table-borderless">
+            <tr>
+                <td><strong>Tạm tính (giá trị hàng hóa gốc):</strong></td>
+                <td class="text-end fw-bold" th:text="|${#numbers.formatDecimal(baseTotal, 0, 'COMMA', 0, 'POINT')} VNĐ|">0 VNĐ</td>
+            </tr>
+            <tr th:if="${hasDiscount and actualDiscount > 0}">
+                <td><strong>Giảm giá VIP hóa đơn:</strong></td>
+                <td class="text-end text-success" th:text="|-${#numbers.formatDecimal(actualDiscount, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</td>
+            </tr>
+            <tr>
+                <td><strong>Thành tiền khách thanh toán:</strong></td>
+                <td class="text-end fw-bold text-primary" th:text="|${#numbers.formatDecimal(actualPaidAmount, 0, 'COMMA', 0, 'POINT')} VNĐ|">0 VNĐ</td>
+            </tr>
+            <tr>
+                <td><strong>Phương thức thanh toán:</strong></td>
+                <td class="text-end" th:text="${paymentMethodVN != null ? paymentMethodVN : 'Chưa xác định'}">Chưa xác định</td>
+            </tr>
+        </table>
+    </div>
+</div>
+                        <!-- Nút quay lại hồ sơ khách hàng -->
                         <div class="text-center mt-4">
-                            <a th:href="@{/admin/customers/{id}(id=${customer != null ? customer.id : 0})}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Quay lại danh sách khách hàng
+                            <a th:href="@{/admin/customers/{customerId}/profile(customerId=${order.customer != null ? order.customer.id : 0})}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Quay lại hồ sơ khách hàng
                             </a>
                         </div>
                     </div>
@@ -136,7 +129,6 @@
             </div>
         </div>
     </div>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

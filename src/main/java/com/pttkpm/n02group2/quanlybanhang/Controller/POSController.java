@@ -3,6 +3,7 @@ package com.pttkpm.n02group2.quanlybanhang.Controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pttkpm.n02group2.quanlybanhang.Model.*;
 import com.pttkpm.n02group2.quanlybanhang.Repository.OrderRepository;
+import com.pttkpm.n02group2.quanlybanhang.Repository.ReturnRequestItemRepository;
 import com.pttkpm.n02group2.quanlybanhang.Service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +42,9 @@ private OrderRepository orderRepository;
     
     @Autowired
     private PromotionService promotionService;
+
+    @Autowired
+private ReturnRequestItemRepository returnRequestItemRepository;
 
     // ==================== POS MAIN INTERFACE ====================
 
@@ -1026,14 +1030,12 @@ public String userOrderHistory(
         List<Order> pageOrders;
 
         if (!hasFilter) {
-            // Không filter: phân trang trực tiếp từ DB
             Page<Order> ordersPage = orderRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
             filteredOrders = ordersPage.getContent();
             totalElements = (int) ordersPage.getTotalElements();
             totalPages = ordersPage.getTotalPages();
             pageOrders = filteredOrders;
         } else {
-            // Có filter: lấy toàn bộ, lọc rồi phân trang thủ công
             List<Order> allOrders = orderRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, Integer.MAX_VALUE)).getContent();
             filteredOrders = allOrders;
             if (date != null && !date.isEmpty()) {
@@ -1065,6 +1067,32 @@ public String userOrderHistory(
             int endIndex = Math.min(startIndex + size, totalElements);
             pageOrders = (startIndex < totalElements) ? filteredOrders.subList(startIndex, endIndex) : new ArrayList<>();
         }
+
+        // TÍNH SỐ TIỀN SAU ĐỔI TRẢ CHO ĐƠN RETURNED (chuẩn logic trang chi tiết)
+        Map<Long, Double> finalAmountAfterReturnMap = new HashMap<>();
+        for (Order order : pageOrders) {
+            if (order.getStatus() != null && order.getStatus().name().equals("RETURNED")) {
+                // Lấy danh sách đổi/trả từ DB nếu có
+                List<ReturnRequestItem> returnItems = returnRequestItemRepository.findByOrderAndType(order, "RETURN");
+                List<ReturnRequestItem> receiveItems = returnRequestItemRepository.findByOrderAndType(order, "RECEIVE");
+                List<OrderItem> orderItems = order.getItems() != null ? order.getItems() : new ArrayList<>();
+                double baseTotal = orderItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum();
+                double vipDiscount = order.getVipDiscountAmount() != null ? order.getVipDiscountAmount() : 0.0;
+                double originalTotal = baseTotal - vipDiscount;
+                double totalReturnAmount = returnItems != null
+                        ? returnItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum()
+                        : 0.0;
+                double totalReceiveAmount = receiveItems != null
+                        ? receiveItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum()
+                        : 0.0;
+                double receiveVipDiscount = (receiveItems != null && baseTotal > 0)
+                        ? receiveItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice() * (vipDiscount / baseTotal)).sum()
+                        : 0.0;
+                double actualPaidAmount = originalTotal - totalReturnAmount + totalReceiveAmount - receiveVipDiscount;
+                finalAmountAfterReturnMap.put(order.getId(), actualPaidAmount);
+            }
+        }
+        model.addAttribute("finalAmountAfterReturnMap", finalAmountAfterReturnMap);
 
         model.addAttribute("orders", pageOrders);
         model.addAttribute("currentPage", page);
@@ -1118,12 +1146,122 @@ public String viewOrderDetail(@PathVariable Long id, Model model, HttpSession se
 }
 
 // THÊM METHOD ĐỂ HỖ TRỢ BACKWARD COMPATIBILITY (nếu cần)
+// ...existing code...
+
 @GetMapping("/historyoder")
 public String viewOrderDetailLegacy(@RequestParam("id") Long id, Model model, HttpSession session) {
-    // Redirect to new endpoint
-    return "redirect:/user/pos/history/" + id;
+    String username = (String) session.getAttribute("username");
+    if (username == null) {
+        return "redirect:/login";
+    }
+
+    Optional<Order> orderOpt = orderRepository.findById(id);
+    if (orderOpt.isEmpty()) {
+        model.addAttribute("error", "Không tìm thấy hóa đơn.");
+        return "redirect:/user/pos/history";
+    }
+
+    Order order = orderOpt.get();
+    model.addAttribute("order", order);
+    model.addAttribute("cashierName", order.getCreatedBy());
+
+    // LẤY DANH SÁCH SẢN PHẨM ĐỔI TRẢ TỪ BẢNG return_request_item
+    List<ReturnRequestItem> returnItems = returnRequestItemRepository.findByOrderAndType(order, "RETURN");
+    List<ReturnRequestItem> receiveItems = returnRequestItemRepository.findByOrderAndType(order, "RECEIVE");
+    model.addAttribute("returnItems", returnItems);
+    model.addAttribute("receiveItems", receiveItems);
+
+    // Tính lại tổng tiền khách thanh toán ban đầu (giảm giá VIP trên tổng hóa đơn gốc)
+    List<OrderItem> orderItems = order.getItems() != null ? order.getItems() : new ArrayList<>();
+    double baseTotal = orderItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum();
+    double vipDiscount = order.getVipDiscountAmount() != null ? order.getVipDiscountAmount() : 0.0;
+    double originalTotal = baseTotal - vipDiscount;
+
+    // Tổng tiền sản phẩm trả lại (không áp dụng giảm giá VIP)
+    double totalReturnAmount = returnItems != null
+        ? returnItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum()
+        : 0.0;
+
+    // Tổng tiền sản phẩm nhận lại (không áp dụng giảm giá VIP)
+    double totalReceiveAmount = receiveItems != null
+        ? receiveItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum()
+        : 0.0;
+
+    // Tổng giảm giá VIP cho sản phẩm nhận lại (nếu có)
+    double receiveVipDiscount = (receiveItems != null && baseTotal > 0)
+        ? receiveItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice() * (vipDiscount / baseTotal)).sum()
+        : 0.0;
+
+    // Thành tiền sau đổi trả
+    double actualPaidAmount = originalTotal - totalReturnAmount + totalReceiveAmount - receiveVipDiscount;
+
+    model.addAttribute("baseTotal", baseTotal);
+    model.addAttribute("originalTotal", originalTotal);
+    model.addAttribute("actualDiscount", vipDiscount);
+    model.addAttribute("totalReturnAmount", totalReturnAmount);
+    model.addAttribute("totalReceiveAmount", totalReceiveAmount);
+    model.addAttribute("receiveVipDiscount", receiveVipDiscount);
+    model.addAttribute("actualPaidAmount", actualPaidAmount);
+
+    // TÍNH DANH SÁCH SẢN PHẨM CÒN LẠI SAU ĐỔI TRẢ
+    Map<Long, Integer> returnedMap = new HashMap<>();
+    for (ReturnRequestItem r : returnItems) {
+        returnedMap.put(r.getProduct().getId(), r.getQuantity());
+    }
+    Map<Long, Map<String, Object>> remainingMap = new HashMap<>();
+    for (OrderItem item : orderItems) {
+        int returned = returnedMap.getOrDefault(item.getProduct().getId(), 0);
+        int remainingQty = item.getQuantity() - returned;
+        if (remainingQty > 0) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("name", item.getProduct().getName());
+            map.put("quantity", remainingQty);
+            map.put("unitPrice", item.getUnitPrice());
+            map.put("totalPrice", remainingQty * item.getUnitPrice());
+            remainingMap.put(item.getProduct().getId(), map);
+        }
+    }
+    // Thêm sản phẩm nhận lại
+    for (ReturnRequestItem r : receiveItems) {
+        Long pid = r.getProduct().getId();
+        if (remainingMap.containsKey(pid)) {
+            Map<String, Object> map = remainingMap.get(pid);
+            int oldQty = (int) map.get("quantity");
+            int newQty = oldQty + r.getQuantity();
+            map.put("quantity", newQty);
+            map.put("totalPrice", newQty * r.getUnitPrice());
+        } else {
+            Map<String, Object> map = new HashMap<>();
+            map.put("name", r.getProduct().getName());
+            map.put("quantity", r.getQuantity());
+            map.put("unitPrice", r.getUnitPrice());
+            map.put("totalPrice", r.getQuantity() * r.getUnitPrice());
+            remainingMap.put(pid, map);
+        }
+    }
+    List<Map<String, Object>> remainingItems = new ArrayList<>(remainingMap.values());
+    model.addAttribute("remainingItems", remainingItems);
+
+    // Hiển thị đúng hình thức thanh toán
+    String paymentMethodVN = "Chưa xác định";
+    if (order.getPaymentMethod() != null) {
+        switch (order.getPaymentMethod()) {
+            case "cash": paymentMethodVN = "Tiền mặt"; break;
+            case "card": paymentMethodVN = "Thẻ"; break;
+            case "transfer": paymentMethodVN = "Chuyển khoản"; break;
+            default: paymentMethodVN = "Tiền mặt";
+        }
+    }
+    model.addAttribute("paymentMethodVN", paymentMethodVN);
+
+    if (order.getStatus() != null && order.getStatus().name().equals("RETURNED")) {
+        return "user/pos/historyoder_return";
+    } else {
+        return "user/pos/historyoder";
+    }
 }
-    // ==================== HELPER METHODS ====================
+// ...existing code...
+  // ==================== HELPER METHODS ====================
 
     private OrderRequest convertCartToOrderRequest(List<CartItem> cartItems, Long customerId,
                                                   String customerName, String customerPhone,
@@ -1192,9 +1330,6 @@ public String viewOrderDetailLegacy(@RequestParam("id") Long id, Model model, Ht
         }
         return orderItems;
     }
-
-
-
 
     
     // ==================== INNER CLASSES ====================

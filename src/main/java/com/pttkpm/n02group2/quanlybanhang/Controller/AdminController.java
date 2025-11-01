@@ -34,44 +34,41 @@ public class AdminController {
     private ProductService productService;
 
     // ==================== DASHBOARD ====================
-    @GetMapping("/dashboard")
-    public String adminDashboard(Model model, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null || user.getRole() != User.Role.ADMIN) {
-            return "redirect:/login";
-        }
-
-        try {
-            // Lấy username để hiển thị
-            model.addAttribute("username", user.getUsername());
-
-            // Lấy thống kê thực tế từ database
-            long totalProducts = productService.countAll();
-            long totalCustomers = customerService.countAll();
-            long totalOrders = orderService.countAll();
-            double totalRevenue = orderService.getTotalRevenue();
-
-            // Format doanh thu
-            String formattedRevenue = String.format("%,.0f", totalRevenue);
-
-            model.addAttribute("totalProducts", totalProducts);
-            model.addAttribute("totalCustomers", totalCustomers);
-            model.addAttribute("totalOrders", totalOrders);
-            model.addAttribute("totalRevenue", formattedRevenue);
-
-            return "admin/dashboard";
-        } catch (Exception e) {
-            e.printStackTrace();
-            // Fallback nếu có lỗi
-            model.addAttribute("totalProducts", 0);
-            model.addAttribute("totalCustomers", 0);
-            model.addAttribute("totalOrders", 0);
-            model.addAttribute("totalRevenue", "0");
-            model.addAttribute("error", "Không thể tải thống kê: " + e.getMessage());
-            return "admin/dashboard";
-        }
+    // ...existing code...
+// ...existing code...
+@GetMapping("/dashboard")
+public String adminDashboard(Model model, HttpSession session) {
+    User user = (User) session.getAttribute("user");
+    if (user == null || user.getRole() != User.Role.ADMIN) {
+        return "redirect:/login";
     }
 
+    try {
+        model.addAttribute("username", user.getUsername());
+
+        long totalProducts = productService.countAll();
+        long totalCustomers = customerService.countAll();
+        long totalOrders = orderService.countAll();
+        double totalRevenue = orderService.getTotalRevenue();
+
+        // CHỈ TRUYỀN SỐ, KHÔNG FORMAT
+        model.addAttribute("totalProducts", totalProducts);
+        model.addAttribute("totalCustomers", totalCustomers);
+        model.addAttribute("totalOrders", totalOrders);
+        model.addAttribute("totalRevenue", (long) totalRevenue); // ép về long nếu chỉ lấy phần nguyên
+
+        return "admin/dashboard";
+    } catch (Exception e) {
+        e.printStackTrace();
+        model.addAttribute("totalProducts", 0);
+        model.addAttribute("totalCustomers", 0);
+        model.addAttribute("totalOrders", 0);
+        model.addAttribute("totalRevenue", 0);
+        model.addAttribute("error", "Không thể tải thống kê: " + e.getMessage());
+        return "admin/dashboard";
+    }
+}
+// ...existing code...
     // ==================== ORDERS ====================
     @GetMapping("/orders")
     public String adminOrders(Model model, HttpSession session) {

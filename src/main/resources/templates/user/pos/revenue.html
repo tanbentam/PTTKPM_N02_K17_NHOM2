@@ -207,6 +207,7 @@
                         </tr>
                     </thead>
                     <!-- ...existing code... -->
+<!-- ...existing code... -->
 <tbody>
     <tr th:each="order : ${orders}">
         <td>
@@ -214,7 +215,9 @@
         </td>
         <td th:text="${order.customer != null ? order.customer.name : 'Khách lẻ'}"></td>
         <td th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
-        <td class="fw-bold text-success">
+        <td class="fw-bold"
+            th:classappend="${order.status != null and order.status.name() == 'RETURNED'} ? 'text-primary' : 'text-success'">
+            <!-- Nếu là hóa đơn đổi trả, lấy đúng số tiền sau đổi trả từ finalAmountAfterReturnMap -->
             <span th:if="${order.status != null and order.status.name() == 'RETURNED'}"
                   th:text="${finalAmountAfterReturnMap[order.id] != null ? #numbers.formatDecimal(finalAmountAfterReturnMap[order.id], 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></span>
             <span th:if="${order.status == null or order.status.name() != 'RETURNED'}"

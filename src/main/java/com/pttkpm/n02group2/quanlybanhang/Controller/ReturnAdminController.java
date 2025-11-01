@@ -39,16 +39,17 @@ public class ReturnAdminController {
 
     // Hiển thị danh sách yêu cầu đổi trả chờ duyệt
     @GetMapping
-    public String listReturnRequests(Model model) {
-        try {
-            List<Order> returnRequests = orderService.findByStatus(Order.OrderStatus.RETURN_REQUESTED);
-            model.addAttribute("returnRequests", returnRequests);
-            return "admin/return/list";
-        } catch (Exception e) {
-            model.addAttribute("error", "Có lỗi xảy ra khi tải danh sách yêu cầu đổi trả: " + e.getMessage());
-            return "admin/return/list";
-        }
+public String listReturnRequests(Model model) {
+    try {
+        List<Order> returnRequests = orderService.findByStatus(Order.OrderStatus.RETURN_REQUESTED);
+        // Các trường returnRequestDate và returnReason đã nằm trong entity Order, không cần xử lý gì thêm
+        model.addAttribute("returnRequests", returnRequests);
+        return "admin/return/list";
+    } catch (Exception e) {
+        model.addAttribute("error", "Có lỗi xảy ra khi tải danh sách yêu cầu đổi trả: " + e.getMessage());
+        return "admin/return/list";
     }
+}
 
     // Hiển thị chi tiết yêu cầu đổi trả
     @GetMapping("/{orderId}")
@@ -107,6 +108,9 @@ public class ReturnAdminController {
             model.addAttribute("totalReturn", totalReturn);
             model.addAttribute("totalReceive", totalReceive);
             model.addAttribute("difference", difference);
+            model.addAttribute("returnRequestDate", order.getReturnRequestDate());
+            model.addAttribute("returnReason", order.getReturnReason());
+
 
             System.out.println("Final totals - Return: " + totalReturn + ", Receive: " + totalReceive + ", Difference: " + difference);
             System.out.println("=== END DEBUG ===");

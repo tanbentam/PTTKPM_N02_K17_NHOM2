@@ -64,6 +64,13 @@ public class Order {
         RETURN_REQUESTED // Yêu cầu đổi trả (chờ admin duyệt)
     }
 
+    // Thêm annotation để lưu vào DB
+    @Column(name = "return_request_date")
+    private LocalDateTime returnRequestDate;
+
+    @Column(name = "return_reason", columnDefinition = "TEXT")
+    private String returnReason;
+
     // Danh sách sản phẩm đổi/trả (ví dụ: các item bị trả lại)
     @Transient
     private List<OrderItem> returnItems;
@@ -155,6 +162,23 @@ public class Order {
 
     public void setReturnRequestItems(List<ReturnRequestItem> returnRequestItems) {
         this.returnRequestItems = returnRequestItems;
+    }
+
+    // Getter & Setter cho returnRequestDate và returnReason
+    public LocalDateTime getReturnRequestDate() {
+        return returnRequestDate;
+    }
+
+    public void setReturnRequestDate(LocalDateTime returnRequestDate) {
+        this.returnRequestDate = returnRequestDate;
+    }
+
+    public String getReturnReason() {
+        return returnReason;
+    }
+
+    public void setReturnReason(String returnReason) {
+        this.returnReason = returnReason;
     }
 
     @PrePersist

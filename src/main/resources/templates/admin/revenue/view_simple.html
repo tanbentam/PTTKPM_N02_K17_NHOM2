@@ -80,36 +80,28 @@
                         </div>
 
                         <!-- Tóm tắt thanh toán -->
-                        <div class="row mt-4">
-                            <div class="col-md-6 offset-md-6">
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <td><strong>Tổng tiền:</strong></td>
-                                        <td class="text-end" th:text="${#numbers.formatDecimal(originalTotal, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">199,000 VNĐ</td>
-                                    </tr>
-                                    <tr th:if="${hasDiscount and actualDiscount > 0}">
-                                        <td><strong>Giảm giá VIP:</strong></td>
-                                        <td class="text-end text-success" th:text="'-' + ${#numbers.formatDecimal(actualDiscount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">-9,950 VNĐ</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Thành tiền:</strong></td>
-                                        <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(actualPaidAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">189,050 VNĐ</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Phương thức thanh toán:</strong></td>
-                                        <td class="text-end">
-                                            <span th:switch="${#strings.toUpperCase(order.paymentMethod)}">
-                                                <span th:case="'CASH'">Tiền mặt</span>
-                                                <span th:case="'TRANSFER'">Chuyển khoản</span>
-                                                <span th:case="'CARD'">Thẻ</span>
-                                                <span th:case="*">Khác</span>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-
+                         <div class="row mt-4">
+    <div class="col-md-6 offset-md-6">
+        <table class="table table-borderless">
+            <tr>
+                <td><strong>Tạm tính (giá trị hàng hóa gốc):</strong></td>
+                <td class="text-end fw-bold" th:text="|${#numbers.formatDecimal(baseTotal, 0, 'COMMA', 0, 'POINT')} VNĐ|">0 VNĐ</td>
+            </tr>
+            <tr th:if="${hasDiscount and actualDiscount > 0}">
+                <td><strong>Giảm giá VIP hóa đơn:</strong></td>
+                <td class="text-end text-success" th:text="|-${#numbers.formatDecimal(actualDiscount, 0, 'COMMA', 0, 'POINT')} VNĐ|">-0 VNĐ</td>
+            </tr>
+            <tr>
+                <td><strong>Thành tiền khách thanh toán:</strong></td>
+                <td class="text-end fw-bold text-primary" th:text="|${#numbers.formatDecimal(actualPaidAmount, 0, 'COMMA', 0, 'POINT')} VNĐ|">0 VNĐ</td>
+            </tr>
+            <tr>
+                <td><strong>Phương thức thanh toán:</strong></td>
+                <td class="text-end" th:text="${paymentMethodVN != null ? paymentMethodVN : 'Chưa xác định'}">Chưa xác định</td>
+            </tr>
+        </table>
+    </div>
+</div>
                         <!-- Nút quay lại -->
                         <div class="text-center mt-4">
                             <a th:href="@{/admin/revenue}" class="btn btn-secondary">

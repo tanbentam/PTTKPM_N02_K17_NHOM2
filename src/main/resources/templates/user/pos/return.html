@@ -10,7 +10,22 @@
     <h3 class="mb-3">Yêu cầu đổi trả cho đơn: <span th:text="${order.orderNumber}"></span></h3>
     <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
     <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
-    <form th:action="@{'/user/pos/return/' + ${order.id}}" method="post" onsubmit="return beforeSubmit() && validateForm()">
+
+    <!-- Nếu đã gửi yêu cầu đổi trả, hiển thị ngày và lý do đổi trả -->
+    <div th:if="${order.returnRequestDate != null}">
+        <div class="mb-2">
+            <label class="form-label"><strong>Ngày yêu cầu đổi trả:</strong></label>
+            <span class="badge bg-info text-dark"
+                  th:text="${#temporals.format(order.returnRequestDate, 'dd/MM/yyyy HH:mm')}">01/01/2025 12:00</span>
+        </div>
+        <div class="mb-3">
+            <label class="form-label"><strong>Lý do đổi trả đã gửi:</strong></label>
+            <div class="alert alert-info" th:text="${order.returnReason}">Lý do đổi trả</div>
+        </div>
+    </div>
+
+    <!-- Nếu chưa gửi yêu cầu đổi trả thì hiển thị form -->
+    <form th:if="${order.returnRequestDate == null}" th:action="@{'/user/pos/return/' + ${order.id}}" method="post" onsubmit="return beforeSubmit() && validateForm()">
         <div class="mb-3">
             <label class="form-label"><strong>Chọn sản phẩm đã mua muốn đổi:</strong></label>
             <table class="table table-bordered">
@@ -60,58 +75,58 @@
                 <option th:each="cat : ${categories}" th:value="${cat}" th:text="${cat}"></option>
             </select>
 
-           <table class="table table-bordered" id="productsTable">
-    <thead>
-        <tr>
-            <th>Chọn</th>
-            <th>Sản phẩm</th>
-            <th>Danh mục</th>
-            <th>Giá</th>
-            <th>Tồn kho</th>
-            <th>Số lượng</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr th:each="product, stat : ${products}" th:attr="data-category=${product.category}">
-            <td>
-                <input type="checkbox" name="newProductIds" th:value="${product.id}"
-                       th:id="|new_checkbox_${stat.index}|"
-                       th:onclick="|toggleNewQuantity(this, ${stat.index}, ${product.quantity})|">
-            </td>
-            <td class="product-name" th:text="${product.name}"></td>
-            <td>
-                <span class="badge bg-primary" th:text="${product.category}"></span>
-            </td>
-            <td>
-                <span th:if="${product.discountPrice != null and product.discountPrice != product.price}">
-                    <del th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'" class="text-muted"></del>
-                    <span class="text-success fw-bold ms-2"
-                          th:text="${#numbers.formatDecimal(product.discountPrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
-                </span>
-                <span th:if="${product.discountPrice == null or product.discountPrice == product.price}"
-                      th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
-            </td>
-            <td>
-                <span th:text="${product.quantity}"
-                      th:class="${product.quantity == 0} ? 'badge bg-danger' : 'badge bg-success'"></span>
-            </td>
-            <td>
-                <div class="input-group" style="max-width: 150px;">
-                    <button type="button" class="btn btn-outline-secondary btn-sm"
-                            th:onclick="|decreaseNew(${stat.index})|"
-                            th:id="|new_decrease_${stat.index}|" disabled>-</button>
-                    <input type="number" name="newQuantities" min="1" th:max="${product.quantity}"
-                           value="1" class="form-control text-center"
-                           th:id="|new_quantity_${stat.index}|"
-                           th:attr="data-stock=${product.quantity}" disabled>
-                    <button type="button" class="btn btn-outline-secondary btn-sm"
-                            th:onclick="|increaseNew(${stat.index}, ${product.quantity})|"
-                            th:id="|new_increase_${stat.index}|" disabled>+</button>
-                </div>
-            </td>
-        </tr>
-    </tbody>
-</table>
+            <table class="table table-bordered" id="productsTable">
+                <thead>
+                    <tr>
+                        <th>Chọn</th>
+                        <th>Sản phẩm</th>
+                        <th>Danh mục</th>
+                        <th>Giá</th>
+                        <th>Tồn kho</th>
+                        <th>Số lượng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="product, stat : ${products}" th:attr="data-category=${product.category}">
+                        <td>
+                            <input type="checkbox" name="newProductIds" th:value="${product.id}"
+                                   th:id="|new_checkbox_${stat.index}|"
+                                   th:onclick="|toggleNewQuantity(this, ${stat.index}, ${product.quantity})|">
+                        </td>
+                        <td class="product-name" th:text="${product.name}"></td>
+                        <td>
+                            <span class="badge bg-primary" th:text="${product.category}"></span>
+                        </td>
+                        <td>
+                            <span th:if="${product.discountPrice != null and product.discountPrice != product.price}">
+                                <del th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'" class="text-muted"></del>
+                                <span class="text-success fw-bold ms-2"
+                                      th:text="${#numbers.formatDecimal(product.discountPrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                            </span>
+                            <span th:if="${product.discountPrice == null or product.discountPrice == product.price}"
+                                  th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+                        </td>
+                        <td>
+                            <span th:text="${product.quantity}"
+                                  th:class="${product.quantity == 0} ? 'badge bg-danger' : 'badge bg-success'"></span>
+                        </td>
+                        <td>
+                            <div class="input-group" style="max-width: 150px;">
+                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                        th:onclick="|decreaseNew(${stat.index})|"
+                                        th:id="|new_decrease_${stat.index}|" disabled>-</button>
+                                <input type="number" name="newQuantities" min="1" th:max="${product.quantity}"
+                                       value="1" class="form-control text-center"
+                                       th:id="|new_quantity_${stat.index}|"
+                                       th:attr="data-stock=${product.quantity}" disabled>
+                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                        th:onclick="|increaseNew(${stat.index}, ${product.quantity})|"
+                                        th:id="|new_increase_${stat.index}|" disabled>+</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
         <div class="mb-3">

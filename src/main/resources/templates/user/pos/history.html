@@ -87,36 +87,48 @@
                     <th>Chi tiết</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr th:each="order, iterStat : ${orders}">
-                    <td th:text="${currentPage * pageSize + iterStat.index + 1}"></td>
-                    <td th:text="${order.orderNumber != null ? order.orderNumber : '---'}"></td>
-                    <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm') : '---'}"></td>
-                    <td th:text="${order.createdBy != null ? order.createdBy : 'Admin'}"></td>
-                    <td th:text="${order.customer != null && order.customer.name != null ? order.customer.name : 'Khách lẻ'}"></td>
-                    <td th:text="${order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---'}"></td>
-                    <td>
-    <span th:switch="${order.status.name()}">
-        <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
-        <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
-        <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
-        <span th:case="'RETURNED'" class="badge bg-info text-dark">Đã trả hàng</span>
-        <span th:case="'RETURN_REQUESTED'" class="badge bg-warning text-dark">Chờ duyệt đổi trả</span>
-        <span th:case="*">Khác</span>
-    </span>
+    
+<tbody>
+    <tr th:each="order, iterStat : ${orders}">
+        <td th:text="${currentPage * pageSize + iterStat.index + 1}"></td>
+        <td th:text="${order.orderNumber != null ? order.orderNumber : '---'}"></td>
+        <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm') : '---'}"></td>
+        <td th:text="${order.createdBy != null ? order.createdBy : 'Admin'}"></td>
+        <td th:text="${order.customer != null && order.customer.name != null ? order.customer.name : 'Khách lẻ'}"></td>
+        <!-- Sửa cột Thành tiền: Nếu có finalAmountAfterReturnMap thì lấy giá trị đã cập nhật, nếu không thì lấy order.finalAmount hoặc order.totalAmount -->
+     
+<td>
+    <!-- Nếu trạng thái là Đã trả hàng và có số tiền cập nhật thì hiển thị số tiền sau đổi trả -->
+    <span th:if="${order.status.name() == 'RETURNED' and finalAmountAfterReturnMap != null and finalAmountAfterReturnMap[order.id] != null}"
+          th:text="${#numbers.formatDecimal(finalAmountAfterReturnMap[order.id], 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span>
+    <!-- Nếu không phải trả hàng hoặc không có số tiền cập nhật thì hiển thị số tiền gốc -->
+    <span th:if="${order.status.name() != 'RETURNED' or finalAmountAfterReturnMap == null or finalAmountAfterReturnMap[order.id] == null}"
+          th:text="${order.finalAmount != null ? #numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : (order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '---')}"></span>
 </td>
-                    <td>
-    <a th:href="@{'/user/pos/historyoder?id=' + ${order.id}}" class="btn btn-sm btn-info">
-        <i class="fas fa-file-invoice"></i> Xem
-    </a>
-    <a th:if="${order.status.name() == 'COMPLETED'}"
-   th:href="@{'/user/pos/return/' + ${order.id}}"
-   class="btn btn-sm btn-warning ms-1">
-    <i class="fas fa-exchange-alt"></i> Đổi trả hàng
-</a>
-</td>
-                </tr>
-            </tbody>
+
+        <td>
+            <span th:switch="${order.status.name()}">
+                <span th:case="'COMPLETED'" class="badge bg-success">Hoàn thành</span>
+                <span th:case="'PENDING'" class="badge bg-warning text-dark">Đang xử lý</span>
+                <span th:case="'CANCELLED'" class="badge bg-danger">Đã hủy</span>
+                <span th:case="'RETURNED'" class="badge bg-info text-dark">Đã trả hàng</span>
+                <span th:case="'RETURN_REQUESTED'" class="badge bg-warning text-dark">Chờ duyệt đổi trả</span>
+                <span th:case="*">Khác</span>
+            </span>
+        </td>
+        <td>
+            <a th:href="@{'/user/pos/historyoder?id=' + ${order.id}}" class="btn btn-sm btn-info">
+                <i class="fas fa-file-invoice"></i> Xem
+            </a>
+            <a th:if="${order.status.name() == 'COMPLETED'}"
+               th:href="@{'/user/pos/return/' + ${order.id}}"
+               class="btn btn-sm btn-warning ms-1">
+                <i class="fas fa-exchange-alt"></i> Đổi trả hàng
+            </a>
+        </td>
+    </tr>
+</tbody>
+
         </table>
 
         <!-- Pagination Navigation -->

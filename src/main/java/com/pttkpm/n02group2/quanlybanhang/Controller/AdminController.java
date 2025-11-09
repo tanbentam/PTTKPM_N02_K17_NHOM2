@@ -16,9 +16,11 @@ import com.pttkpm.n02group2.quanlybanhang.Model.Customer;
 import com.pttkpm.n02group2.quanlybanhang.Model.Order;
 import com.pttkpm.n02group2.quanlybanhang.Model.OrderItem;
 import com.pttkpm.n02group2.quanlybanhang.Model.User;
+import com.pttkpm.n02group2.quanlybanhang.Model.ReturnRequestItem;
 import com.pttkpm.n02group2.quanlybanhang.Service.CustomerService;
 import com.pttkpm.n02group2.quanlybanhang.Service.OrderService;
 import com.pttkpm.n02group2.quanlybanhang.Service.ProductService;
+import com.pttkpm.n02group2.quanlybanhang.Repository.ReturnRequestItemRepository;
 
 import java.util.List;
 import jakarta.servlet.http.HttpSession;
@@ -32,43 +34,79 @@ public class AdminController {
     private OrderService orderService;
     @Autowired
     private ProductService productService;
+    @Autowired
+    private ReturnRequestItemRepository returnRequestItemRepository;
 
     // ==================== DASHBOARD ====================
-    // ...existing code...
-// ...existing code...
-@GetMapping("/dashboard")
-public String adminDashboard(Model model, HttpSession session) {
-    User user = (User) session.getAttribute("user");
-    if (user == null || user.getRole() != User.Role.ADMIN) {
-        return "redirect:/login";
+    @GetMapping("/dashboard")
+    public String adminDashboard(Model model, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            return "redirect:/login";
+        }
+
+        try {
+            model.addAttribute("username", user.getUsername());
+
+            long totalProducts = productService.countAll();
+            long totalCustomers = customerService.countAll();
+            long totalOrders = orderService.countAll();
+
+            // Tính tổng doanh thu đúng logic đổi trả và giảm giá VIP
+            double totalRevenue = 0;
+            List<Order> allOrders = orderService.findAllOrders();
+            for (Order order : allOrders) {
+                if (order.getStatus() != null && order.getStatus().name().equals("RETURNED")) {
+                    List<ReturnRequestItem> returnItems = returnRequestItemRepository.findByOrderAndTypeIgnoreCase(order, "RETURN");
+                    List<ReturnRequestItem> receiveItems = returnRequestItemRepository.findByOrderAndTypeIgnoreCase(order, "RECEIVE");
+
+                    double totalReturnAmount = returnItems != null
+                            ? returnItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum()
+                            : 0.0;
+                    double totalReceiveAmount = receiveItems != null
+                            ? receiveItems.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum()
+                            : 0.0;
+
+                    List<OrderItem> orderItems = order.getItems();
+                    double baseTotal = orderItems != null
+                            ? orderItems.stream().mapToDouble(i -> i.getQuantity() * i.getPrice()).sum()
+                            : 0.0;
+                    double actualDiscount = order.getVipDiscountAmount() != null ? order.getVipDiscountAmount() : 0;
+                    boolean hasDiscount = actualDiscount > 0;
+                    double originalTotal = baseTotal - actualDiscount;
+
+                    double receiveVipDiscount = 0.0;
+                    if (hasDiscount && baseTotal > 0 && receiveItems != null) {
+                        receiveVipDiscount = receiveItems.stream()
+                                .mapToDouble(i -> i.getQuantity() * i.getUnitPrice() * (actualDiscount / baseTotal))
+                                .sum();
+                    }
+
+                    double finalAmountAfterReturn = originalTotal - totalReturnAmount + totalReceiveAmount - receiveVipDiscount;
+                    totalRevenue += finalAmountAfterReturn;
+                } else {
+                    totalRevenue += order.getFinalAmount() != null ? order.getFinalAmount() :
+                                    (order.getTotalAmount() != null ? order.getTotalAmount() : 0);
+                }
+            }
+
+            model.addAttribute("totalProducts", totalProducts);
+            model.addAttribute("totalCustomers", totalCustomers);
+            model.addAttribute("totalOrders", totalOrders);
+            model.addAttribute("totalRevenue", (long) totalRevenue);
+
+            return "admin/dashboard";
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("totalProducts", 0);
+            model.addAttribute("totalCustomers", 0);
+            model.addAttribute("totalOrders", 0);
+            model.addAttribute("totalRevenue", 0);
+            model.addAttribute("error", "Không thể tải thống kê: " + e.getMessage());
+            return "admin/dashboard";
+        }
     }
 
-    try {
-        model.addAttribute("username", user.getUsername());
-
-        long totalProducts = productService.countAll();
-        long totalCustomers = customerService.countAll();
-        long totalOrders = orderService.countAll();
-        double totalRevenue = orderService.getTotalRevenue();
-
-        // CHỈ TRUYỀN SỐ, KHÔNG FORMAT
-        model.addAttribute("totalProducts", totalProducts);
-        model.addAttribute("totalCustomers", totalCustomers);
-        model.addAttribute("totalOrders", totalOrders);
-        model.addAttribute("totalRevenue", (long) totalRevenue); // ép về long nếu chỉ lấy phần nguyên
-
-        return "admin/dashboard";
-    } catch (Exception e) {
-        e.printStackTrace();
-        model.addAttribute("totalProducts", 0);
-        model.addAttribute("totalCustomers", 0);
-        model.addAttribute("totalOrders", 0);
-        model.addAttribute("totalRevenue", 0);
-        model.addAttribute("error", "Không thể tải thống kê: " + e.getMessage());
-        return "admin/dashboard";
-    }
-}
-// ...existing code...
     // ==================== ORDERS ====================
     @GetMapping("/orders")
     public String adminOrders(Model model, HttpSession session) {
